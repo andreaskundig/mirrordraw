@@ -1,0 +1,46 @@
+<style>
+a { 
+	background-color:#00ff44;
+	display:inline-block;
+	cursor:pointer;
+	color:#ffffff;
+	font-size:20px;
+	font-weight:bold;
+	padding:8px 31px;
+	text-decoration:none;
+}
+</style> 
+<script src="processing-1.4.1.min.js"></script>
+<canvas data-processing-sources="Panel.pde Field.pde mirrordraw.pde"></canvas>
+<p><a id="downloadLnk" download="euler.png">Télécharger</a> 
+   <a id="uploadLnk">Importer</a>
+   <input type="file" id="imageLoader" name="imageLoader" style="display:none"/></p>
+<script>
+ document.getElementById("downloadLnk").addEventListener('click', download, false);
+ document.getElementById("uploadLnk").addEventListener('click', upload, false);
+ document.getElementById('imageLoader').addEventListener('change', handleImage, false);
+ var canvas = document.getElementsByTagName("canvas")[0];
+
+ function upload(){
+  document.getElementById('imageLoader').click();
+ };
+ 
+ function download() {
+    var dt = canvas.toDataURL('image/png');
+    this.href = dt;
+ };
+
+ function handleImage(e){
+    var reader = new FileReader();
+    reader.onload = function(event){
+        var img = new Image();
+        img.onload = function(){
+            //canvas.width = img.width;
+            //canvas.height = img.height;
+            canvas.getContext('2d').drawImage(img,0,0);
+        }
+        img.src = event.target.result;
+    }
+    reader.readAsDataURL(e.target.files[0]);     
+}
+</script>
