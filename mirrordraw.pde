@@ -8,16 +8,19 @@ Field [] fields;
 void setup() {
   // 640;//540;//min(displayWidth, 640);
   // 905;//764;//int(totalWidth*sqrt(2)); //min(displayHeight, int(totalWidth*sqrt(2)));
-  size(640, 905);
+  PVector offset = new PVector( 60, 10 );
+  int siz = 300;
+  size(siz + offset.x, siz*2+offset.y);
   int totalWidth = width;
   int totalHeight = height;
   
   int myWidth = totalWidth - 10;
   int myHeight = totalHeight -10;
-  
-  PVector offset = new PVector( 60, 10 );
-  PVector corner = new PVector(myWidth - offset.x, myHeight / 2 - offset.y ); 
-  PVector center = new PVector (int(corner.x *.6), corner.y / 2);
+
+  PVector corner = new PVector(myWidth - offset.x,
+                               myHeight / 2 - offset.y );
+  PVector center = new PVector (int(corner.x *.5),
+                                corner.y / 2);
 
   int gutter = 10;
   PVector translation1 = new PVector(corner.x-center.x, gutter+corner.y+center.y);
@@ -26,7 +29,8 @@ void setup() {
   panels = new Panel [] {
      new Panel(new PVector(0,0), center, translation1, false, offset),
      new Panel(new PVector(0,corner.y), center, translation2, true, offset),
-     new Panel(new PVector(center.x,0), corner, translation3, false, offset)
+     new Panel(new PVector(center.x, 0), new PVector(corner.x, center.y), translation3, false, offset),
+     new Panel(center, corner, translation3, false, offset)
   };
   
   int fieldSize = 50; 
