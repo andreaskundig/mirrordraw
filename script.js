@@ -12,49 +12,55 @@ function flip(page){
     return {up: !page.up, panels: page.panels.slice().reverse()};
 }
 
+function canvasContains(canvConf, x, y){
+    return x >= canvConf.x && x <= canvConf.x + canvConf.w
+        && y >= canvConf.y && y <= canvConf.y + canvConf.h;
+}
+
 function canvasHtml(config) {
-    const { w, h, left, top } = config;
+    const { w, h, x, y } = config;
     return `
         <canvas
              width="${w}px"
              height="${h}px"
-             style="margin:${top}px ${left}px;
+             style="margin:${y}px ${x}px;
                     border: 1px solid;
                     position: absolute;" ></canvas> `;
 }
 
-function createSheet(parent, canvasCount, d){
+function createSheet(parent, canvasCount, d, state){
     const canvasConfigs = [...Array(canvasCount)].map((_, i) => ({
         w: d.size.w,
         h: d.size.h,
-        left: d.margin.left + i * (d.margin.left + d.size.w),
-        top: d.margin.top
+        x: d.margin.left + i * (d.margin.left + d.size.w),
+        y: d.margin.top
     }));
+    const totalWidth = canvasConfigs.length *(d.size.w + d.margin.left);
     parent.insertAdjacentHTML('afterbegin',
       `<div class="sheet" style="position: relative">
         ${canvasConfigs.map(canvasHtml).join('')}
         <div class="receiver"
              style="position: absolute;
-                    width: ${d.size.w + d.margin.left}px;
+                    width: ${totalWidth}px;
                     height: ${d.size.h + d.margin.top + 20}px;
                     z-index:1;"></div>
        </div>`);
     const receiver = parent.querySelector('.receiver');
     const canvasEls = parent.querySelectorAll('canvas');
-    const canvases = canvasConfigs.map((c, i) => {
+    const canvases = canvasConfigs.map((canvConf, i) => {
         const canvas = canvasEls[i];
         const context = canvas.getContext('2d');
-        return Object.assign(c,{canvas, context})
+        return Object.assign(canvConf,{i, canvas, context})
     })
-    return {receiver, canvases};
+    return {receiver, canvases, state};
 }
 
 const byId = (id) => document.getElementById(id);
 const canvasParentId = 'canvas-parent';
 
 function addDrawingListeners(sheet, dims){
-    const {receiver, canvases} = sheet;
-    const drawingState = { isDrawing: false, x: 0, y: 0 };
+    const {receiver, canvases, state} = sheet;
+    state.drawing = { isDrawing: false, x: 0, y: 0 };
     const correctCoordinates = (e) => {
         const x = e.offsetX - dims.margin.left;
         const y = e.offsetY - dims.margin.top;
@@ -62,36 +68,39 @@ function addDrawingListeners(sheet, dims){
     }
     receiver.addEventListener('mousedown', e => {
         const [x, y] = correctCoordinates(e);
-        drawingState.x = x;
-        drawingState.y = y;
-        drawingState.isDrawing = true;
+        const canvas = canvases.find(c => canvasContains(c, x, y));
+        console.log('c', canvas?.i );
+        state.drawing.x = x;
+        state.drawing.y = y;
+        state.drawing.isDrawing = true;
     });
     receiver.addEventListener('mousemove', e => {
         const [x, y] = correctCoordinates(e);
-        if (drawingState.isDrawing === true) {
-            drawLines(canvases, drawingState, x, y);
-            drawingState.x = x;
-            drawingState.y = y;
+        if (state.drawing.isDrawing === true) {
+            drawLines(canvases, x, y, state);
+            state.drawing.x = x;
+            state.drawing.y = y;
         }
     });
     const endDrawing = (e) => {
         const [x, y] = correctCoordinates(e);
-        if (drawingState.isDrawing === true) {
-            drawLines(canvases, drawingState, x, y);
-            drawingState.x = x;
-            drawingState.y = y;
-            drawingState.isDrawing = false;
+        if (state.drawing.isDrawing === true) {
+            drawLines(canvases, x, y, state);
+            state.drawing.x = x;
+            state.drawing.y = y;
+            state.drawing.isDrawing = false;
         }
     }
     receiver.addEventListener('mouseup', endDrawing);
     // eventReceiver.addEventListener('mouseout', endDrawing);
 }
 
-function drawLines(canvases, state, x1, y1) {
-    const page = p1;
+function drawLines(canvases, x, y, state) {
+    const {page, lineStyle} = state;
     const [srcCanvas, ...destCanvases] = canvases;
     const [srcOrder, ...destOrders] = page;
-    drawLine(srcCanvas.context, state.x, state.y, x1, y1);
+    drawLine(srcCanvas.context, state.drawing.x, state.drawing.y, x, y,
+            lineStyle);
     const w = srcCanvas.w/2;
     const h = srcCanvas.h/2;
     destCanvases.forEach((destCanvas,i) => {
@@ -139,27 +148,30 @@ function copyFlippedPanel(srcCanvas, srcIndexes,
         s[0] * w, s[1] * h, w, h,
         flippedDx, flippedDy, w, h);
     // Reset transformation matrix to the identity matrix
-    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
-function drawLine(context, x1, y1, x2, y2) {
-  context.beginPath();
-  context.strokeStyle = 'black';
-  context.lineWidth = 10;
-  context.lineCap = 'round';
-  context.moveTo(x1, y1);
-  context.lineTo(x2, y2);
-  context.stroke();
-  context.closePath();
+function drawLine(context, x1, y1, x2, y2, lineStyle) {
+    context.beginPath();
+    context.strokeStyle = lineStyle?.strokeStyle || 'black';
+    context.lineWidth = lineStyle?.lineWidth || 10;
+    context.lineCap = 'round';
+    context.moveTo(x1, y1);
+    context.lineTo(x2, y2);
+    context.stroke();
+    context.closePath();
 }
 
-function init(){
+function init() {
     const cs = byId('cs');
     console.log('cs', cs?.shadowRoot.firstElementChild.firstElementChild);
-    const dims = {size:{w: 200, h:200}, margin: {left:10,top:0}};
+    const dims = { size: { w: 200, h: 400 }, margin: { left: 10, top: 0 } };
     const canvasParent = byId('canvas-parent');
-   const canvasCount = 3;
-   const sheet = createSheet(canvasParent, canvasCount, dims);
+    const canvasCount = 3;
+    const globalState = { page: p1, lineStyle: {strokeStyle: 'blue',
+                                                lineWidth: 5} };
+    const sheet = createSheet(canvasParent, canvasCount,
+                              dims, globalState);
     addDrawingListeners(sheet, dims)
 }
 window.addEventListener('load', init);
