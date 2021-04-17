@@ -58,34 +58,34 @@ function createSheet(parent, canvasCount, d, state){
 const byId = (id) => document.getElementById(id);
 const canvasParentId = 'canvas-parent';
 
+function correctCoordinates([x, y], dims) {
+    const newX = x - dims.margin.left;
+    const newY = y - dims.margin.top;
+    return [newX, newY];
+}
+
 function addDrawingListeners(sheet, dims){
     const {receiver, canvases, state} = sheet;
     state.drawing = { isDrawing: false, x: 0, y: 0 };
-    const correctCoordinates = (e) => {
-        const x = e.offsetX - dims.margin.left;
-        const y = e.offsetY - dims.margin.top;
-        return [x, y];
-    }
     receiver.addEventListener('mousedown', e => {
-        const [x, y] = correctCoordinates(e);
-        const canvas = canvases.find(c => canvasContains(c, x, y));
-        console.log('c', canvas?.i );
-        state.drawing.x = x;
-        state.drawing.y = y;
+        state.drawing.x = e.offsetX;
+        state.drawing.y = e.offsetY;
         state.drawing.isDrawing = true;
     });
     receiver.addEventListener('mousemove', e => {
-        const [x, y] = correctCoordinates(e);
+        const x = e.offsetX;
+        const y = e.offsetY;
         if (state.drawing.isDrawing === true) {
-            drawLines(canvases, x, y, state);
+            drawLines(canvases, x, y, state, dims);
             state.drawing.x = x;
             state.drawing.y = y;
         }
     });
     const endDrawing = (e) => {
-        const [x, y] = correctCoordinates(e);
+        const x = e.offsetX;
+        const y = e.offsetY;
         if (state.drawing.isDrawing === true) {
-            drawLines(canvases, x, y, state);
+            drawLines(canvases, x, y, state, dims);
             state.drawing.x = x;
             state.drawing.y = y;
             state.drawing.isDrawing = false;
@@ -95,18 +95,22 @@ function addDrawingListeners(sheet, dims){
     // eventReceiver.addEventListener('mouseout', endDrawing);
 }
 
-function drawLines(canvases, x, y, state) {
+function drawLines(canvases, x, y, state, dims) {
+    const currentCanvas = canvases.find(c => canvasContains(c, x, y));
     const {page, lineStyle} = state;
     const [srcCanvas, ...destCanvases] = canvases;
     const [srcOrder, ...destOrders] = page;
-    drawLine(srcCanvas.context, state.drawing.x, state.drawing.y, x, y,
-            lineStyle);
+    const oldXY = [state.drawing.x, state.drawing.y];
+    const from = correctCoordinates(oldXY, dims);
+    const to = correctCoordinates([x, y], dims);
+    drawLine(srcCanvas.context, from, to, lineStyle);
     const w = srcCanvas.w/2;
     const h = srcCanvas.h/2;
     destCanvases.forEach((destCanvas,i) => {
         const destOrder = destOrders[i];
         const flip = srcOrder.up != destOrder.up;
-        copyCanvas(srcCanvas, srcOrder, destCanvas, destOrder, w, h, flip);
+        copyCanvas(srcCanvas, srcOrder, destCanvas, destOrder,
+                   w, h, flip);
     });
 }
 
@@ -151,7 +155,7 @@ function copyFlippedPanel(srcCanvas, srcIndexes,
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
-function drawLine(context, x1, y1, x2, y2, lineStyle) {
+function drawLine(context, [x1, y1], [x2, y2], lineStyle) {
     context.beginPath();
     context.strokeStyle = lineStyle?.strokeStyle || 'black';
     context.lineWidth = lineStyle?.lineWidth || 10;
@@ -165,7 +169,7 @@ function drawLine(context, x1, y1, x2, y2, lineStyle) {
 function init() {
     const cs = byId('cs');
     console.log('cs', cs?.shadowRoot.firstElementChild.firstElementChild);
-    const dims = { size: { w: 200, h: 400 }, margin: { left: 10, top: 0 } };
+    const dims = { size: { w: 200, h: 400 }, margin: { left: 20, top: 0 } };
     const canvasParent = byId('canvas-parent');
     const canvasCount = 3;
     const globalState = { page: p1, lineStyle: {strokeStyle: 'blue',
