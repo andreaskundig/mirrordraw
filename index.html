@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>mirror draw</title>
+    <style>
+      /* https://css-tricks.com/how-to-stack-elements-in-css/ */
+      #canvas-parent > div {
+          border: 1px solid red;
+          height: 250px;
+      }
+      body{margin:0}
+    </style>
+    <!-- <link rel="stylesheet" href="style.css"> -->
+    <script type="module" src="drawing-canvas.js"></script>
+    <script type="module" src="script.js"></script>
+  </head>
+  <body>
+    <div id="canvas-parent"></div>
+    <div>
+    <drawing-canvas width="200" height="200" id="cs"> </drawing-canvas>
+    </div>
+    <div>
+      <drawing-canvas width="200" height="200"> </drawing-canvas>
+    </div>
+    <div style="background-color: pink;
+                width:20px; height:50px; position:relative">
+      <div style="background-color: red; top:5px;
+                  width:10px; height:10px; position:absolute">
+      </div>
+    </div>
+    <div style="background-color: brown; width:20px; height:50px; position:relative">
+      <div style="background-color: red; top:15px;
+                  width:10px; height:10px; position:absolute">
+      </div>
+    </div>
+  </body>
+</html>
