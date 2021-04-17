@@ -5,8 +5,17 @@
 const panelIndexes = {a: [0,0], b: [1,0], c: [0,1], d: [1,1]};
 const p1 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
              {up: true,  panels:['b', 'a', 'd', 'c']},
+             {up: false, panels:['b', 'a', 'd', 'c']}];
+const p2 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
+             {up: false, panels:['b', 'a', 'd', 'c']}];
+const p3 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
+             {up: true,  panels:['b', 'a', 'd', 'c']}];
+const p4 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
              {up: false, panels:['b', 'a', 'd', 'c']},
-           ]
+             {up: false, panels:['a', 'b', 'c', 'd']}];
+const p5 = p3;
+const p6 = p2;
+const pages = [p1, p2, p3, p4, p5, p6];
 
 function flip(page){
     return {up: !page.up, panels: page.panels.slice().reverse()};
@@ -64,34 +73,41 @@ function createSheet(parent, canvasCount, d, state){
     return {receiver, canvases, state};
 }
 
-function addButtons(parent, canvases, state) {
-    parent.insertAdjacentHTML('beforeend',
-        `<a class="download" href="#" target="_blank">download</a>
-         <a class="upload" href="#" >upload</a>
-         <input type="file" class="imageLoader"
-                name="imageLoader" style="display:none"/>
-        <a class="clear" href="#" >clear</a>
-`);
-    const srcCanvas = canvases[0];
-    const context = srcCanvas.context;
+function addDownloadButton(parent, canvases, before) {
+    const place = before ? 'afterbegin' : 'beforeend';
+    parent.insertAdjacentHTML(
+        place,
+        `<a class="download" href="#" target="_blank">download</a>`);
     const download = parent.querySelector('.download');
     download.addEventListener('click', function() {
+        const context = canvases[0].context;
         this.href = context.canvas.toDataURL('image/png');
     }, false);
-    const clearAll = () =>
-        canvases.forEach(c => {
-            const ctx = c.context;
-            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        });
+}
+
+function addClearButton(parent, canvases, before) {
+    const place = before ? 'afterbegin' : 'beforeend';
+    parent.insertAdjacentHTML(
+        place,
+        ' <a class="clear" href="#" >clear</a>');
     const clear = parent.querySelector('.clear');
-    clear.addEventListener('click', clearAll, false);
+    clear.addEventListener('click', () => clearAll(canvases), false);
+}
+
+function addUploadButton(parent, canvases, state, before) {
+    const place = before ? 'afterbegin' : 'beforeend';
+    parent.insertAdjacentHTML(place, `
+        <a class="upload" href="#" >upload</a>
+        <input type="file" class="imageLoader" style="display:none"/>
+    `);
+    const srcCanvas = canvases[0];
     const imageLoader = parent.querySelector('.imageLoader')
     imageLoader.addEventListener('change', (changeEvent) => {
         var reader = new FileReader();
         reader.addEventListener('load', (event) => {
             var img = new Image();
             img.addEventListener('load', () => {
-                clearAll();
+                clearAll(canvases);
                 srcCanvas.context.drawImage(img, 0, 0);
                 copySrcCanvas(srcCanvas, canvases, state.page);
             });
@@ -103,6 +119,29 @@ function addButtons(parent, canvases, state) {
     upload.addEventListener('click', function() {
         imageLoader.click();
     }, false);
+}
+
+function addPageSelect(parent, canvases, state, before) {
+    const place = before ? 'afterbegin' : 'beforeend';
+    parent.insertAdjacentHTML(place, `
+        <select class="pages">
+           ${pages.map((_p, i)=>
+              `<option value="${i}">page ${i+1}</option>`).join('')}
+        </select>
+    `);
+    const srcCanvas = canvases[0];
+    const pageSelect = parent.querySelector('.pages')
+    pageSelect.addEventListener('change', function(e) {
+        state.page = pages[+e.target.value]
+        clearAll(canvases.slice(1));
+        copySrcCanvas(srcCanvas, canvases, state.page);
+    }, false);
+}
+function addButtons(parent, canvases, state) {
+    addDownloadButton(parent, canvases, false);
+    addUploadButton(parent, canvases, state, false);
+    addClearButton(parent, canvases, false);
+    addPageSelect(parent, canvases, state, true);
 }
 
 const byId = (id) => document.getElementById(id);
@@ -154,11 +193,19 @@ function copySrcCanvas(srcCanvas, canvases, page){
     const destCanvases = canvases.filter(c => c.i != srcCanvas.i);
     destCanvases.forEach(destCanvas => {
         const destOrder = page[destCanvas.i];
+        if(!destOrder){ return; }
         const flip = srcOrder.up != destOrder.up;
         const w = srcCanvas.w / 2;
         const h = srcCanvas.h / 2;
         copyCanvas(srcCanvas, srcOrder, destCanvas, destOrder,
                    w, h, flip);
+    });
+}
+
+function clearAll(canvases) {
+    canvases.forEach(c => {
+        const ctx = c.context;
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     });
 }
 
