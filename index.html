@@ -2,11 +2,35 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>mirror draw</title>
+    <title>dessine un flexagone</title>
+    <style>
+      body{
+          font-family: sans-serif;
+      }
+      .menu { margin: 10px 0; }
+      .menu > * { margin: 0 3px; }
+      .menu > div { display: inline-block; }
+      .menu> a {
+          display: inline-block;
+          height: 13px;
+          background: lightgrey;
+          padding: 8px;
+          text-align: center;
+          text-decoration: inherit;
+          color: inherit;
+          border-radius: 7px;
+      }
+      .menu select {
+          padding: 4px;
+          border-radius: 7px;
+      }
+    </style>
     <!-- <script type="module" src="drawing-canvas.js"></script> -->
     <script type="module" src="script.js"></script>
   </head>
   <body>
+    <div id="top-menu" class="menu"></div>
     <div id="canvas-parent"></div>
+    <div id="bottom-menu" class="menu"></div>
   </body>
 </html>

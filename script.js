@@ -2,20 +2,21 @@
 // http://www.williammalone.com/articles/create-html5-canvas-javascript-drawing-app/
 // https://developer.mozilla.org/en-US/docs/Web/API/Element/mousedown_event
 
-const panelIndexes = {a: [0,0], b: [1,0], c: [0,1], d: [1,1]};
-const p1 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
+const PANEL_INDEXES = {a: [0,0], b: [1,0], c: [0,1], d: [1,1]};
+const P1 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
              {up: true,  panels:['b', 'a', 'd', 'c']},
              {up: false, panels:['b', 'a', 'd', 'c']}];
-const p2 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
+const P2 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
              {up: false, panels:['b', 'a', 'd', 'c']}];
-const p3 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
+const P3 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
              {up: true,  panels:['b', 'a', 'd', 'c']}];
-const p4 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
+const P4 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
              {up: false, panels:['b', 'a', 'd', 'c']},
              {up: false, panels:['a', 'b', 'c', 'd']}];
-const p5 = p3;
-const p6 = p2;
-const pages = [p1, p2, p3, p4, p5, p6];
+const P5 = P3;
+const P6 = P2;
+const PAGES = [P1, P2, P3, P4, P5, P6];
+const LINE_WIDTHS = [3, 7, 20, 55, 150, 400];
 
 function flip(page){
     return {up: !page.up, panels: page.panels.slice().reverse()};
@@ -33,7 +34,7 @@ function canvasHtml(config) {
              width="${w}px"
              height="${h}px"
              style="margin:${y}px ${x}px;
-                    background-color: white;
+                    cursor: crosshair;
                     position: absolute;" ></canvas> `;
 }
 
@@ -68,35 +69,35 @@ function createSheet(parent, canvasCount, d, state){
         const canvas = canvasEls[i];
         const context = canvas.getContext('2d');
         return Object.assign(canvConf,{i, canvas, context})
-    })
-    // addPersistenceButtons(parent, canvases[0].context);
+    });
+    clearAll(canvases);
+    //TODO put receiver and canvases in state?
     return {receiver, canvases, state};
 }
 
-function addDownloadButton(parent, canvases, before) {
-    const place = before ? 'afterbegin' : 'beforeend';
+function addDownloadButton(parent, canvases) {
     parent.insertAdjacentHTML(
-        place,
+        'beforeend',
         `<a class="download" href="#" target="_blank">download</a>`);
     const download = parent.querySelector('.download');
     download.addEventListener('click', function() {
         const context = canvases[0].context;
         this.href = context.canvas.toDataURL('image/png');
     }, false);
+    return download;
 }
 
-function addClearButton(parent, canvases, before) {
-    const place = before ? 'afterbegin' : 'beforeend';
+function addClearButton(parent, canvases) {
     parent.insertAdjacentHTML(
-        place,
+        'beforeend',
         ' <a class="clear" href="#" >clear</a>');
     const clear = parent.querySelector('.clear');
     clear.addEventListener('click', () => clearAll(canvases), false);
+    return clear;
 }
 
-function addUploadButton(parent, canvases, state, before) {
-    const place = before ? 'afterbegin' : 'beforeend';
-    parent.insertAdjacentHTML(place, `
+function addUploadButton(parent, canvases, state) {
+    parent.insertAdjacentHTML('beforeend', `
         <a class="upload" href="#" >upload</a>
         <input type="file" class="imageLoader" style="display:none"/>
     `);
@@ -119,29 +120,90 @@ function addUploadButton(parent, canvases, state, before) {
     upload.addEventListener('click', function() {
         imageLoader.click();
     }, false);
+    return upload;
 }
 
-function addPageSelect(parent, canvases, state, before) {
-    const place = before ? 'afterbegin' : 'beforeend';
-    parent.insertAdjacentHTML(place, `
+function addPageSelect(parent, canvases, state) {
+    parent.insertAdjacentHTML('beforeend', `
         <select class="pages">
-           ${pages.map((_p, i)=>
+           ${PAGES.map((_p, i)=>
               `<option value="${i}">page ${i+1}</option>`).join('')}
         </select>
     `);
     const srcCanvas = canvases[0];
     const pageSelect = parent.querySelector('.pages')
     pageSelect.addEventListener('change', function(e) {
-        state.page = pages[+e.target.value]
+        state.page = PAGES[+e.target.value]
         clearAll(canvases.slice(1));
         copySrcCanvas(srcCanvas, canvases, state.page);
     }, false);
+
+    return pageSelect;
 }
-function addButtons(parent, canvases, state) {
-    addDownloadButton(parent, canvases, false);
-    addUploadButton(parent, canvases, state, false);
-    addClearButton(parent, canvases, false);
-    addPageSelect(parent, canvases, state, true);
+
+function addColorButton(parent, state) {
+    const icons = {black: '&#11035;', white: '&#11036;'};
+    parent.insertAdjacentHTML(
+        'beforeend',
+        `<span class="color-button" style="cursor: pointer" ></span>`);
+    const colorButton = parent.querySelector('.color-button');
+
+    colorButton.update = (state) => {
+        const newColor = state.lineStyle.strokeStyle || 'black';
+        const newIcon = icons[newColor];
+        colorButton.innerHTML = newIcon;
+    };
+
+    colorButton.addEventListener('click', function() {
+        const isBlack = state.lineStyle.strokeStyle == 'black';
+        const newColor = isBlack ? 'white' : 'black';
+        state.lineStyle.strokeStyle = newColor;
+        colorButton.update(state);
+    }, false);
+
+    return colorButton;
+}
+
+function addLineWidthSlider(parent, state) {
+    const fromUi = (i) => LINE_WIDTHS[i];
+    const toUi = (v) => LINE_WIDTHS.findIndex(w => w == v);
+    // const toUi = (v) => v;
+    // const fromUi = (v) => v;
+    parent.insertAdjacentHTML(
+        'beforeend',
+        `<div>
+           <input class="width-slider" type="range"
+                  style="width: 70px"
+                  min="0" max="${LINE_WIDTHS.length-1}" step="1">
+           <input class="width-display" disabled
+                  style="width: 25px; text-align: right;">
+         </div>`);
+    const slider = parent.querySelector('.width-slider');
+    const display = parent.querySelector('.width-display');
+    slider.update = (state) => {
+        slider.value = toUi(state.lineStyle.lineWidth);
+        display.value = state.lineStyle.lineWidth;
+    };
+    slider.addEventListener('input', function() {
+        state.lineStyle.lineWidth = fromUi(slider.value);
+        display.value = state.lineStyle.lineWidth;
+    }, false);
+    return slider;
+}
+
+function addButtons(canvases, state) {
+    const btns = [];
+    const topMenu = byId('top-menu');
+    btns.push(addColorButton(topMenu, state));
+    btns.push(addLineWidthSlider(topMenu, state));
+    btns.push(addClearButton(topMenu, canvases));
+    btns.push(addPageSelect(topMenu, canvases, state));
+    // const bottomMenu = byId('bottom-menu');
+    btns.push(addDownloadButton(topMenu, canvases));
+    btns.push(addUploadButton(topMenu, canvases, state));
+
+    btns.forEach(b => b.update && b.update(state));
+
 }
 
 const byId = (id) => document.getElementById(id);
@@ -205,7 +267,9 @@ function copySrcCanvas(srcCanvas, canvases, page){
 function clearAll(canvases) {
     canvases.forEach(c => {
         const ctx = c.context;
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        // ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     });
 }
 
@@ -219,8 +283,8 @@ function copyCanvas(srcCanvas, srcOrder, destCanvas, destOrder,
                     w, h, flip ){
     srcOrder.panels.forEach((sourceName, i) => {
         const destinationName = destOrder.panels[i];
-        const s = panelIndexes[sourceName];
-        const d = panelIndexes[destinationName];
+        const s = PANEL_INDEXES[sourceName];
+        const d = PANEL_INDEXES[destinationName];
         if(flip){
             copyFlippedPanel(srcCanvas, s, destCanvas, d, w, h);
         }else{
@@ -272,12 +336,13 @@ function init() {
                    margin: { left: 20, top: 10 } };
     const canvasParent = byId('canvas-parent');
     const canvasCount = 3;
-    const globalState = { page: p1, lineStyle: {strokeStyle: 'black',
-                                                lineWidth: 5} };
+    const globalState = { page: P1,
+                          lineStyle: {strokeStyle: 'black',
+                                      lineWidth: LINE_WIDTHS[1]} };
     const sheet = createSheet(canvasParent, canvasCount,
                               dims, globalState);
     addDrawingListeners(sheet, dims);
-    addButtons(canvasParent, sheet.canvases, globalState);
+    addButtons(sheet.canvases, globalState);
 }
 window.addEventListener('load', init);
 
