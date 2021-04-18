@@ -104,7 +104,7 @@ function addClearButton(parent, canvases) {
     return clear;
 }
 
-function addUploadButton(parent, canvases, state) {
+function addUploadButton(parent, canvases, state, dpr) {
     parent.insertAdjacentHTML('beforeend', `
         <a class="upload" href="#" >upload</a>
         <input type="file" class="imageLoader" style="display:none"/>
@@ -120,7 +120,7 @@ function addUploadButton(parent, canvases, state) {
                 const ctx = srcCanvas.context;
                 ctx.drawImage(img, 0, 0,
                               ctx.canvas.height, ctx.canvas.width);
-                copySrcCanvas(srcCanvas, canvases, state.page);
+                copySrcCanvas(srcCanvas, canvases, state.page, dpr);
             });
             img.src = event.target.result;
         });
@@ -133,7 +133,7 @@ function addUploadButton(parent, canvases, state) {
     return upload;
 }
 
-function addPageSelect(parent, canvases, state) {
+function addPageSelect(parent, canvases, state, dpr) {
     parent.insertAdjacentHTML('beforeend', `
         <select class="pages">
            ${PAGES.map((_p, i)=>
@@ -145,7 +145,7 @@ function addPageSelect(parent, canvases, state) {
     pageSelect.addEventListener('change', function(e) {
         state.page = PAGES[+e.target.value]
         clearAll(canvases.slice(1));
-        copySrcCanvas(srcCanvas, canvases, state.page);
+        copySrcCanvas(srcCanvas, canvases, state.page, dpr);
     }, false);
 
     return pageSelect;
@@ -201,16 +201,17 @@ function addLineWidthSlider(parent, state) {
     return slider;
 }
 
-function addButtons(canvases, state) {
+function addButtons(canvases, state, dims) {
     const btns = [];
+    const dpr = dims.size.dpr;
     const topMenu = byId('top-menu');
     btns.push(addColorButton(topMenu, state));
     btns.push(addLineWidthSlider(topMenu, state));
     btns.push(addClearButton(topMenu, canvases));
-    btns.push(addPageSelect(topMenu, canvases, state));
+    btns.push(addPageSelect(topMenu, canvases, state, dpr));
     // const bottomMenu = byId('bottom-menu');
     btns.push(addDownloadButton(topMenu, canvases));
-    btns.push(addUploadButton(topMenu, canvases, state));
+    btns.push(addUploadButton(topMenu, canvases, state, dpr));
 
     btns.forEach(b => b.update && b.update(state));
 
@@ -268,20 +269,20 @@ function drawLines(canvases, x, y, dpr, state) {
     const from = canvasCoordinates(oldXY, srcCanvas);
     const to = canvasCoordinates([x, y], srcCanvas);
     drawLine(srcCanvas.context, from, to, dpr, lineStyle);
-    copySrcCanvas(srcCanvas, canvases, page);
+    copySrcCanvas(srcCanvas, canvases, page, dpr);
 }
 
-function copySrcCanvas(srcCanvas, canvases, page){
+function copySrcCanvas(srcCanvas, canvases, page, dpr){
     const srcOrder = page[srcCanvas.i];
     const destCanvases = canvases.filter(c => c.i != srcCanvas.i);
     destCanvases.forEach(destCanvas => {
         const destOrder = page[destCanvas.i];
         if(!destOrder){ return; }
         const flip = srcOrder.up != destOrder.up;
-        const w = srcCanvas.w / 2;
-        const h = srcCanvas.h / 2;
+        const w = srcCanvas.w / 2 ;
+        const h = srcCanvas.h / 2 ;
         copyCanvas(srcCanvas, srcOrder, destCanvas, destOrder,
-                   w, h, flip);
+                   w, h, dpr, flip);
     });
 }
 
@@ -301,28 +302,31 @@ function canvasCoordinates([x, y], canvasConfig) {
 }
 
 function copyCanvas(srcCanvas, srcOrder, destCanvas, destOrder,
-                    w, h, flip ){
+                    w, h, dpr, flip ){
     srcOrder.panels.forEach((sourceName, i) => {
         const destinationName = destOrder.panels[i];
         const s = PANEL_INDEXES[sourceName];
         const d = PANEL_INDEXES[destinationName];
         if(flip){
-            copyFlippedPanel(srcCanvas, s, destCanvas, d, w, h);
+            copyFlippedPanel(srcCanvas, s, destCanvas, d, w, h, dpr);
         }else{
-            copyPanel(srcCanvas, s, destCanvas, d, w, h);
+            copyPanel(srcCanvas, s, destCanvas, d, w, h, dpr);
         }
     })
 }
 
-function copyPanel(srcCanvas, srcIndexes, destCanvas, destIndexes, w, h){
+function copyPanel(srcCanvas, srcIndexes, destCanvas, destIndexes,
+                   w, h, dpr){
     const s = srcIndexes;
     const d = destIndexes;
     destCanvas.context.drawImage(srcCanvas.canvas,
-        s[0] * w, s[1] * h, w, h,
-        d[0] * w, d[1] * h, w, h);
+        s[0] * w * dpr, s[1] * h * dpr,
+        w * dpr, h * dpr,
+        d[0] * w * dpr, d[1] * h * dpr,
+        w * dpr, h * dpr);
 }
-function copyFlippedPanel(srcCanvas, srcIndexes,
-                          destCanvas, destIndexes, w, h){
+function copyFlippedPanel(srcCanvas, srcIndexes, destCanvas, destIndexes,
+                          w, h, dpr){
     const s = srcIndexes;
     const d = destIndexes;
     const ctx = destCanvas.context;
@@ -332,13 +336,17 @@ function copyFlippedPanel(srcCanvas, srcIndexes,
     const centerDy = dy + h/2;
     const flippedDx = - w / 2;
     const flippedDy = - h / 2;
-    ctx.translate(centerDx, centerDy);
+    ctx.save();
+    ctx.translate(centerDx * dpr, centerDy * dpr);
     ctx.rotate(Math.PI);
     ctx.drawImage(srcCanvas.canvas,
-        s[0] * w, s[1] * h, w, h,
-        flippedDx, flippedDy, w, h);
+        s[0] * w * dpr, s[1] * h * dpr,
+        w * dpr, h * dpr,
+        flippedDx * dpr, flippedDy * dpr,
+        w * dpr, h * dpr);
+    ctx.restore();
     // Reset transformation matrix to the identity matrix
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
 function drawLine(context, [x1, y1], [x2, y2], dpr, lineStyle) {
@@ -376,7 +384,7 @@ function init() {
     const sheet = createSheet(canvasParent, canvasCount,
                               dims, state);
     addDrawingListeners(sheet, dims);
-    addButtons(sheet.canvases, state);
+    addButtons(sheet.canvases, state, dims);
 }
 window.addEventListener('load', init);
 
