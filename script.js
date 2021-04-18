@@ -333,7 +333,7 @@ function drawLine(context, [x1, y1], [x2, y2], lineStyle) {
 
 function init() {
     const dims = { size: { w: 400, h: 400 },
-                   margin: { left: 20, top: 10 } };
+                   margin: { left: 20, top: 20 } };
     const canvasParent = byId('canvas-parent');
     const canvasCount = 3;
     const globalState = { page: P1,
