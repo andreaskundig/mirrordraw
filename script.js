@@ -99,7 +99,7 @@ function addDownloadButton(parent, canvases) {
     return download;
 }
 
-function addClearButton(parent) {
+function addClearButton(parent, canvases) {
     parent.insertAdjacentHTML(
         'beforeend',
         ' <a class="clear" href="#" >clear</a>');
