@@ -212,12 +212,12 @@ const canvasParentId = 'canvas-parent';
 function addDrawingListeners(sheet){
     const {receiver, canvases, state} = sheet;
     state.drawing = { isDrawing: false, x: 0, y: 0 };
-    receiver.addEventListener('mousedown', e => {
+    const startLine = e => {
         state.drawing.x = e.offsetX;
         state.drawing.y = e.offsetY;
         state.drawing.isDrawing = true;
-    });
-    receiver.addEventListener('mousemove', e => {
+    };
+    const continueLine =  e => {
         const x = e.offsetX;
         const y = e.offsetY;
         if (state.drawing.isDrawing === true) {
@@ -225,7 +225,7 @@ function addDrawingListeners(sheet){
             state.drawing.x = x;
             state.drawing.y = y;
         }
-    });
+    };
     const endDrawing = (e) => {
         const x = e.offsetX;
         const y = e.offsetY;
@@ -236,7 +236,9 @@ function addDrawingListeners(sheet){
             state.drawing.isDrawing = false;
         }
     }
-    receiver.addEventListener('mouseup', endDrawing);
+    receiver.addEventListener('pointerdown', startLine);
+    receiver.addEventListener('pointermove', continueLine);
+    receiver.addEventListener('pointerup', endDrawing);
 }
 
 function drawLines(canvases, x, y, state) {
