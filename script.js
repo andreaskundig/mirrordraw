@@ -356,13 +356,17 @@ function init() {
     const defaultWidth = Math.min(350, maxW);
     const dims = { size: { w: defaultWidth, h: defaultWidth }, margin};
     const canvasParent = byId('canvas-parent');
-    const globalState = { page: P1,
-                          lineStyle: {strokeStyle: 'black',
-                                      lineWidth: LINE_WIDTHS[1]} };
+    const state = {
+        page: P1,
+        lineStyle: {
+            strokeStyle: 'black',
+            lineWidth: LINE_WIDTHS[1]
+        }
+    };
     const sheet = createSheet(canvasParent, canvasCount,
-                              dims, globalState);
+                              dims, state);
     addDrawingListeners(sheet, dims);
-    addButtons(sheet.canvases, globalState);
+    addButtons(sheet.canvases, state);
 }
 window.addEventListener('load', init);
 
