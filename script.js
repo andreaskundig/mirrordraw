@@ -258,11 +258,12 @@ function addDrawingListeners(sheet){
 function drawLines(canvases, x, y, state) {
     const srcCanvas = canvases.find(c => canvasContains(c, x, y));
     if(!srcCanvas){ return; }
-    const {page, lineStyle} = state;
+    const {page, lineStyle: {lineWidth, strokeStyle}} = state;
     const oldXY = [state.drawing.x, state.drawing.y];
     const from = canvasCoordinates(oldXY, srcCanvas);
     const to = canvasCoordinates([x, y], srcCanvas);
-    drawLine(srcCanvas.context, from, to, lineStyle);
+    scheduleDrawLine(srcCanvas.context, from, to,
+                     lineWidth, strokeStyle, state);
     copySrcCanvas(srcCanvas, canvases, page);
 }
 
@@ -336,10 +337,10 @@ function copyFlippedPanel(srcCanvas, srcIndexes,
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
-function drawLine(context, [x1, y1], [x2, y2], lineStyle) {
+function drawLine(context, [x1, y1], [x2, y2], lineWidth, strokeStyle) {
     context.beginPath();
-    context.strokeStyle = lineStyle?.strokeStyle || 'black';
-    context.lineWidth = lineStyle?.lineWidth || 10;
+    context.strokeStyle = strokeStyle || 'black';
+    context.lineWidth = lineWidth || 10;
     context.lineCap = 'round';
     context.moveTo(x1, y1);
     context.lineTo(x2, y2);
@@ -347,22 +348,40 @@ function drawLine(context, [x1, y1], [x2, y2], lineStyle) {
     context.closePath();
 }
 
+function scheduleDrawLine(context, from, to, lineWidth, strokeStyle, state) {
+    state.scheduledLines.push({
+        context,
+        from, to,
+        strokeStyle: strokeStyle || 'black',
+        lineWidth: lineWidth || 10});
+}
+
+function drawScheduledLines(state){
+    const lines = state.scheduledLines;
+    state.scheduledLines = [];
+    lines.forEach(l =>
+        drawLine(l.context, l.from, l.to,
+                 l.lineWidth, l.strokeStyle ));
+    requestAnimationFrame(() => drawScheduledLines(state));
+}
+
 function init() {
 
     const canvasCount = 3;
     const margin = { left: 20, top: 20 }
     const maxW = maxCanvWidth(document.body.clientWidth, margin, canvasCount);
-    console.log(document.body.clientWidth, maxW);
     const defaultWidth = Math.min(350, maxW);
     const dims = { size: { w: defaultWidth, h: defaultWidth }, margin};
     const canvasParent = byId('canvas-parent');
-    const globalState = { page: P1,
+    const state = { page: P1,
                           lineStyle: {strokeStyle: 'black',
-                                      lineWidth: LINE_WIDTHS[1]} };
+                                      lineWidth: LINE_WIDTHS[1]},
+                          scheduledLines: []};
     const sheet = createSheet(canvasParent, canvasCount,
-                              dims, globalState);
+                              dims, state);
     addDrawingListeners(sheet, dims);
-    addButtons(sheet.canvases, globalState);
+    addButtons(sheet.canvases, state);
+    requestAnimationFrame(() => drawScheduledLines(state));
 }
 window.addEventListener('load', init);
 
