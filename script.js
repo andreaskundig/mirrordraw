@@ -38,6 +38,10 @@ function canvasHtml(config) {
                     position: absolute;" ></canvas> `;
 }
 
+const maxCanvWidth = (screenWidth, margin, canvasCount)=>
+      (screenWidth - margin.left) / canvasCount  - margin.left;
+
+
 function createSheet(parent, canvasCount, d, state){
     const canvasConfigs = [...Array(canvasCount)].map((_, i) => ({
         w: d.size.w,
@@ -109,7 +113,9 @@ function addUploadButton(parent, canvases, state) {
             var img = new Image();
             img.addEventListener('load', () => {
                 clearAll(canvases);
-                srcCanvas.context.drawImage(img, 0, 0);
+                const ctx = srcCanvas.context;
+                ctx.drawImage(img, 0, 0,
+                              ctx.canvas.height, ctx.canvas.width);
                 copySrcCanvas(srcCanvas, canvases, state.page);
             });
             img.src = event.target.result;
@@ -213,6 +219,9 @@ function addDrawingListeners(sheet){
     const {receiver, canvases, state} = sheet;
     state.drawing = { isDrawing: false, x: 0, y: 0 };
     const startLine = e => {
+
+    // https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events
+        receiver.setPointerCapture(e.pointerId);
         state.drawing.x = e.offsetX;
         state.drawing.y = e.offsetY;
         state.drawing.isDrawing = true;
@@ -236,9 +245,14 @@ function addDrawingListeners(sheet){
             state.drawing.isDrawing = false;
         }
     }
+    // receiver.addEventListener('mousedown', startLine);
+    // receiver.addEventListener('mousemove', continueLine);
+    // receiver.addEventListener('mouseup', endDrawing);a
     receiver.addEventListener('pointerdown', startLine);
     receiver.addEventListener('pointermove', continueLine);
     receiver.addEventListener('pointerup', endDrawing);
+    // receiver.addEventListener('pointercancel', endDrawing);
+    // receiver.addEventListener('pointerout', endDrawing);
 }
 
 function drawLines(canvases, x, y, state) {
@@ -334,10 +348,14 @@ function drawLine(context, [x1, y1], [x2, y2], lineStyle) {
 }
 
 function init() {
-    const dims = { size: { w: 400, h: 400 },
-                   margin: { left: 20, top: 20 } };
-    const canvasParent = byId('canvas-parent');
+
     const canvasCount = 3;
+    const margin = { left: 20, top: 20 }
+    const maxW = maxCanvWidth(document.body.clientWidth, margin, canvasCount);
+    console.log(document.body.clientWidth, maxW);
+    const defaultWidth = Math.min(350, maxW);
+    const dims = { size: { w: defaultWidth, h: defaultWidth }, margin};
+    const canvasParent = byId('canvas-parent');
     const globalState = { page: P1,
                           lineStyle: {strokeStyle: 'black',
                                       lineWidth: LINE_WIDTHS[1]} };
