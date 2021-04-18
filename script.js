@@ -5,14 +5,18 @@
 const PANEL_INDEXES = {a: [0,0], b: [1,0], c: [0,1], d: [1,1]};
 const P1 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
              {up: true,  panels:['b', 'a', 'd', 'c']},
-             {up: false, panels:['b', 'a', 'd', 'c']}];
+             {up: false, panels:['c', 'd', 'a', 'b']}];
+             // {up: false, panels:['b', 'a', 'd', 'c']}];
 const P2 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
-             {up: false, panels:['b', 'a', 'd', 'c']}];
+             {up: false, panels:['c', 'd', 'a', 'b']}];
+             // {up: false, panels:['b', 'a', 'd', 'c']}];
 const P3 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
              {up: true,  panels:['b', 'a', 'd', 'c']}];
 const P4 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
-             {up: false, panels:['b', 'a', 'd', 'c']},
-             {up: false, panels:['a', 'b', 'c', 'd']}];
+             {up: false, panels:['b', 'c', 'd', 'a']},
+             {up: false, panels:['c', 'd', 'a', 'b']}];
+             // {up: false, panels:['b', 'a', 'd', 'c']},
+             // {up: false, panels:['a', 'b', 'c', 'd']}];
 const P5 = P3;
 const P6 = P2;
 const PAGES = [P1, P2, P3, P4, P5, P6];
@@ -95,7 +99,7 @@ function addDownloadButton(parent, canvases) {
     return download;
 }
 
-function addClearButton(parent, canvases) {
+function addClearButton(parent) {
     parent.insertAdjacentHTML(
         'beforeend',
         ' <a class="clear" href="#" >clear</a>');
@@ -120,7 +124,8 @@ function addUploadButton(parent, canvases, state, dpr) {
                 const ctx = srcCanvas.context;
                 ctx.drawImage(img, 0, 0,
                               ctx.canvas.height, ctx.canvas.width);
-                copySrcCanvas(srcCanvas, canvases, state.page, dpr);
+                const { page, flip } = state;
+                copySrcCanvas(srcCanvas, canvases, dpr, page, flip);
             });
             img.src = event.target.result;
         });
@@ -145,7 +150,8 @@ function addPageSelect(parent, canvases, state, dpr) {
     pageSelect.addEventListener('change', function(e) {
         state.page = PAGES[+e.target.value]
         clearAll(canvases.slice(1));
-        copySrcCanvas(srcCanvas, canvases, state.page, dpr);
+        const {page, flip} = state;
+        copySrcCanvas(srcCanvas, canvases, dpr, page, flip);
     }, false);
 
     return pageSelect;
@@ -201,17 +207,38 @@ function addLineWidthSlider(parent, state) {
     return slider;
 }
 
+function addFlipCheckbox(parent, canvases, state, dpr) {
+    parent.insertAdjacentHTML(
+        'beforeend',
+        `<div>
+            <input type="checkbox" class="flip" ">
+            <label for="flip">flip</label>
+         </div>`);
+    const checkbox = parent.querySelector('.flip');
+    checkbox.update = (state) => {
+        checkbox.checked = state.flip;
+    };
+    checkbox.addEventListener('change', function() {
+        state.flip = checkbox.checked;
+        const {page, flip} = state;
+        const srcCanvas = canvases[0];
+        copySrcCanvas(srcCanvas, canvases, dpr, page, flip);
+    }, false);
+    return checkbox;
+}
+
 function addButtons(canvases, state, dims) {
     const btns = [];
     const dpr = dims.size.dpr;
-    const topMenu = byId('top-menu');
-    btns.push(addColorButton(topMenu, state));
-    btns.push(addLineWidthSlider(topMenu, state));
-    btns.push(addClearButton(topMenu, canvases));
-    btns.push(addPageSelect(topMenu, canvases, state, dpr));
-    // const bottomMenu = byId('bottom-menu');
-    btns.push(addDownloadButton(topMenu, canvases));
-    btns.push(addUploadButton(topMenu, canvases, state, dpr));
+    // const topMenu = byId('top-menu');
+    const bottomMenu = byId('bottom-menu');
+    btns.push(addColorButton(bottomMenu, state));
+    btns.push(addLineWidthSlider(bottomMenu, state));
+    btns.push(addClearButton(bottomMenu, canvases));
+    btns.push(addFlipCheckbox(bottomMenu, canvases, state, dpr));
+    btns.push(addPageSelect(bottomMenu, canvases, state, dpr));
+    btns.push(addDownloadButton(bottomMenu, canvases));
+    btns.push(addUploadButton(bottomMenu, canvases, state, dpr));
 
     btns.forEach(b => b.update && b.update(state));
 
@@ -264,25 +291,25 @@ function addDrawingListeners(sheet, dims){
 function drawLines(canvases, x, y, dpr, state) {
     const srcCanvas = canvases.find(c => canvasContains(c, x, y));
     if(!srcCanvas){ return; }
-    const {page, lineStyle} = state;
+    const {page, flip, lineStyle} = state;
     const oldXY = [state.drawing.x, state.drawing.y];
     const from = canvasCoordinates(oldXY, srcCanvas);
     const to = canvasCoordinates([x, y], srcCanvas);
     drawLine(srcCanvas.context, from, to, dpr, lineStyle);
-    copySrcCanvas(srcCanvas, canvases, page, dpr);
+    copySrcCanvas(srcCanvas, canvases, dpr, page, flip);
 }
 
-function copySrcCanvas(srcCanvas, canvases, page, dpr){
+function copySrcCanvas(srcCanvas, canvases, dpr, page, flip){
     const srcOrder = page[srcCanvas.i];
     const destCanvases = canvases.filter(c => c.i != srcCanvas.i);
     destCanvases.forEach(destCanvas => {
         const destOrder = page[destCanvas.i];
         if(!destOrder){ return; }
-        const flip = srcOrder.up != destOrder.up;
+        const upsideDown = flip && srcOrder.up != destOrder.up;
         const w = srcCanvas.w / 2 ;
         const h = srcCanvas.h / 2 ;
         copyCanvas(srcCanvas, srcOrder, destCanvas, destOrder,
-                   w, h, dpr, flip);
+                   w, h, dpr, upsideDown);
     });
 }
 
@@ -302,12 +329,14 @@ function canvasCoordinates([x, y], canvasConfig) {
 }
 
 function copyCanvas(srcCanvas, srcOrder, destCanvas, destOrder,
-                    w, h, dpr, flip ){
+                    w, h, dpr, upsideDown ){
+    const destPanels = destOrder.panels.slice();
+    if(upsideDown){ destPanels.reverse(); }
     srcOrder.panels.forEach((sourceName, i) => {
-        const destinationName = destOrder.panels[i];
+        const destinationName = destPanels[i];
         const s = PANEL_INDEXES[sourceName];
         const d = PANEL_INDEXES[destinationName];
-        if(flip){
+        if(upsideDown){
             copyFlippedPanel(srcCanvas, s, destCanvas, d, w, h, dpr);
         }else{
             copyPanel(srcCanvas, s, destCanvas, d, w, h, dpr);
@@ -369,13 +398,13 @@ function init() {
     const margin = { left: 20, top: 20 }
     const maxW = maxCanvWidth(document.body.clientWidth,
                               margin, canvasCount);
-    console.log(document.body.clientWidth, maxW);
     const defaultWidth = Math.min(350, maxW);
     const dims = { size: { w: defaultWidth, h: defaultWidth,
                            dpr: window.devicePixelRatio }, margin};
     const canvasParent = byId('canvas-parent');
     const state = {
         page: P1,
+        flip: true,
         lineStyle: {
             strokeStyle: 'black',
             lineWidth: LINE_WIDTHS[1]
