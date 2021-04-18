@@ -28,12 +28,14 @@ function canvasContains(canvConf, x, y){
 }
 
 function canvasHtml(config) {
-    const { w, h, x, y } = config;
+    const { w, h, d, x, y } = config;
     return `
         <canvas
-             width="${w}px"
-             height="${h}px"
+             width="${w*d}px"
+             height="${h*d}px"
              style="margin:${y}px ${x}px;
+                    width:${w}px;
+                    height:${h}px;
                     cursor: crosshair;
                     position: absolute;" ></canvas> `;
 }
@@ -46,9 +48,11 @@ function createSheet(parent, canvasCount, d, state){
     const canvasConfigs = [...Array(canvasCount)].map((_, i) => ({
         w: d.size.w,
         h: d.size.h,
+        d: d.size.dpr,
         x: d.margin.left +
             i * (d.margin.left + d.size.w ),
-        y: d.margin.top
+        y: d.margin.top,
+        s: d.size.dpr
     }));
     const totalWidth = d.margin.left +
           canvasConfigs.length *(d.size.w + d.margin.left);
@@ -215,9 +219,10 @@ function addButtons(canvases, state) {
 const byId = (id) => document.getElementById(id);
 const canvasParentId = 'canvas-parent';
 
-function addDrawingListeners(sheet){
+function addDrawingListeners(sheet, dims){
     const {receiver, canvases, state} = sheet;
     state.drawing = { isDrawing: false, x: 0, y: 0 };
+    const dpr = dims.size.dpr;
     const startLine = e => {
 
     // https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events
@@ -230,7 +235,7 @@ function addDrawingListeners(sheet){
         const x = e.offsetX;
         const y = e.offsetY;
         if (state.drawing.isDrawing === true) {
-            drawLines(canvases, x, y, state);
+            drawLines(canvases, x, y, dpr, state);
             state.drawing.x = x;
             state.drawing.y = y;
         }
@@ -239,7 +244,7 @@ function addDrawingListeners(sheet){
         const x = e.offsetX;
         const y = e.offsetY;
         if (state.drawing.isDrawing === true) {
-            drawLines(canvases, x, y, state);
+            drawLines(canvases, x, y, dpr, state);
             state.drawing.x = x;
             state.drawing.y = y;
             state.drawing.isDrawing = false;
@@ -255,14 +260,14 @@ function addDrawingListeners(sheet){
     // receiver.addEventListener('pointerout', endDrawing);
 }
 
-function drawLines(canvases, x, y, state) {
+function drawLines(canvases, x, y, dpr, state) {
     const srcCanvas = canvases.find(c => canvasContains(c, x, y));
     if(!srcCanvas){ return; }
     const {page, lineStyle} = state;
     const oldXY = [state.drawing.x, state.drawing.y];
     const from = canvasCoordinates(oldXY, srcCanvas);
     const to = canvasCoordinates([x, y], srcCanvas);
-    drawLine(srcCanvas.context, from, to, lineStyle);
+    drawLine(srcCanvas.context, from, to, dpr, lineStyle);
     copySrcCanvas(srcCanvas, canvases, page);
 }
 
@@ -336,7 +341,9 @@ function copyFlippedPanel(srcCanvas, srcIndexes,
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
-function drawLine(context, [x1, y1], [x2, y2], lineStyle) {
+function drawLine(context, [x1, y1], [x2, y2], dpr, lineStyle) {
+    context.save();
+    context.scale(dpr, dpr);
     context.beginPath();
     context.strokeStyle = lineStyle?.strokeStyle || 'black';
     context.lineWidth = lineStyle?.lineWidth || 10;
@@ -345,16 +352,19 @@ function drawLine(context, [x1, y1], [x2, y2], lineStyle) {
     context.lineTo(x2, y2);
     context.stroke();
     context.closePath();
+    context.restore();
 }
 
 function init() {
 
     const canvasCount = 3;
     const margin = { left: 20, top: 20 }
-    const maxW = maxCanvWidth(document.body.clientWidth, margin, canvasCount);
+    const maxW = maxCanvWidth(document.body.clientWidth,
+                              margin, canvasCount);
     console.log(document.body.clientWidth, maxW);
     const defaultWidth = Math.min(350, maxW);
-    const dims = { size: { w: defaultWidth, h: defaultWidth }, margin};
+    const dims = { size: { w: defaultWidth, h: defaultWidth,
+                           dpr: window.devicePixelRatio }, margin};
     const canvasParent = byId('canvas-parent');
     const state = {
         page: P1,
