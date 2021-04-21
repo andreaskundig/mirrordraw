@@ -13,8 +13,8 @@ const P2 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
 const P3 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
              {up: true,  panels:['b', 'a', 'd', 'c']}];
 const P4 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
-             {up: false, panels:['b', 'c', 'd', 'a']},
-             {up: false, panels:['c', 'd', 'a', 'b']}];
+             {up: false, panels:['c', 'd', 'a', 'b']},
+             {up: false, panels:['d', 'c', 'b', 'a']}];
              // {up: false, panels:['b', 'a', 'd', 'c']},
              // {up: false, panels:['a', 'b', 'c', 'd']}];
 const P5 = P3;
