@@ -247,35 +247,51 @@ function addButtons(canvases, state, dims) {
 const byId = (id) => document.getElementById(id);
 const canvasParentId = 'canvas-parent';
 
+const START_DRAWING_STATE = { isDrawing: false, x: 0, y: 0 };
+
+const provideDrawingState = (state, pointerId) =>{
+    let drawing = state.drawing[pointerId];
+    drawing = drawing || Object.assign({}, START_DRAWING_STATE);
+    state.drawing[pointerId] = drawing;
+    return drawing;
+}
+
 function addDrawingListeners(sheet, dims){
     const {receiver, canvases, state} = sheet;
-    state.drawing = { isDrawing: false, x: 0, y: 0 };
+    state.drawing = { };
     const dpr = dims.size.dpr;
     const startLine = e => {
-
+        const pointerId = e.pointerId;
+        const drawing = provideDrawingState(state, pointerId);
     // https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events
         receiver.setPointerCapture(e.pointerId);
-        state.drawing.x = e.offsetX;
-        state.drawing.y = e.offsetY;
-        state.drawing.isDrawing = true;
-    };
-    const continueLine =  e => {
         const x = e.offsetX;
         const y = e.offsetY;
-        if (state.drawing.isDrawing === true) {
-            drawLines(canvases, x, y, dpr, state);
-            state.drawing.x = x;
-            state.drawing.y = y;
+        drawing.x = x;
+        drawing.y = y;
+        drawing.isDrawing = true;
+    };
+    const continueLine =  e => {
+        const pointerId = e.pointerId;
+        const drawing = provideDrawingState(state, pointerId);
+        if (drawing.isDrawing === true) {
+            const x = e.offsetX;
+            const y = e.offsetY;
+            drawLines(canvases, x, y, dpr, state, drawing);
+            drawing.x = x;
+            drawing.y = y;
         }
     };
     const endDrawing = (e) => {
-        const x = e.offsetX;
-        const y = e.offsetY;
-        if (state.drawing.isDrawing === true) {
-            drawLines(canvases, x, y, dpr, state);
-            state.drawing.x = x;
-            state.drawing.y = y;
-            state.drawing.isDrawing = false;
+        const pointerId = e.pointerId;
+        const drawing = provideDrawingState(state, pointerId);
+        if (drawing.isDrawing === true) {
+            const x = e.offsetX;
+            const y = e.offsetY;
+            drawLines(canvases, x, y, dpr, state, drawing);
+            drawing.x = x;
+            drawing.y = y;
+            drawing.isDrawing = false;
         }
     }
     // receiver.addEventListener('mousedown', startLine);
@@ -288,11 +304,16 @@ function addDrawingListeners(sheet, dims){
     // receiver.addEventListener('pointerout', endDrawing);
 }
 
-function drawLines(canvases, x, y, dpr, state) {
+function drawLines(canvases, x, y, dpr, state, drawing) {
     const srcCanvas = canvases.find(c => canvasContains(c, x, y));
     if(!srcCanvas){ return; }
     const {page, flip, lineStyle} = state;
-    const oldXY = [state.drawing.x, state.drawing.y];
+    const oldXY = [drawing.x, drawing.y];
+    const oldSrcCanvas =
+          canvases.find(c => canvasContains(c, ...oldXY));
+    if(srcCanvas != oldSrcCanvas){
+        console.log('changed canvas')
+    }
     const from = canvasCoordinates(oldXY, srcCanvas);
     const to = canvasCoordinates([x, y], srcCanvas);
     drawLine(srcCanvas.context, from, to, dpr, lineStyle);
