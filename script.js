@@ -249,9 +249,8 @@ const canvasParentId = 'canvas-parent';
 
 const START_DRAWING_STATE = { isDrawing: false, x: 0, y: 0 };
 
-const provideDrawingState = (state, pointerId) =>{
-    let drawing = state.drawing[pointerId];
-    drawing = drawing || Object.assign({}, START_DRAWING_STATE);
+const createDrawingState = (state, pointerId) =>{
+    const drawing = Object.assign({}, START_DRAWING_STATE);
     state.drawing[pointerId] = drawing;
     return drawing;
 }
@@ -262,7 +261,7 @@ function addDrawingListeners(sheet, dims){
     const dpr = dims.size.dpr;
     const startLine = e => {
         const pointerId = e.pointerId;
-        const drawing = provideDrawingState(state, pointerId);
+        const drawing = createDrawingState(state, pointerId);
     // https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events
         receiver.setPointerCapture(e.pointerId);
         const x = e.offsetX;
@@ -273,7 +272,7 @@ function addDrawingListeners(sheet, dims){
     };
     const continueLine =  e => {
         const pointerId = e.pointerId;
-        const drawing = provideDrawingState(state, pointerId);
+        const drawing = state.drawing[pointerId];
         if (drawing.isDrawing === true) {
             const x = e.offsetX;
             const y = e.offsetY;
@@ -284,14 +283,12 @@ function addDrawingListeners(sheet, dims){
     };
     const endDrawing = (e) => {
         const pointerId = e.pointerId;
-        const drawing = provideDrawingState(state, pointerId);
+        const drawing = state.drawing[pointerId];
         if (drawing.isDrawing === true) {
+            delete state.drawing[pointerId];
             const x = e.offsetX;
             const y = e.offsetY;
             drawLines(canvases, x, y, dpr, state, drawing);
-            drawing.x = x;
-            drawing.y = y;
-            drawing.isDrawing = false;
         }
     }
     // receiver.addEventListener('mousedown', startLine);
