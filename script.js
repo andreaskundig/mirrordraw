@@ -259,46 +259,46 @@ function addDrawingListeners(sheet, dims){
     const {receiver, canvases, state} = sheet;
     state.drawing = { };
     const dpr = dims.size.dpr;
-    const startLine = e => {
-        const pointerId = e.pointerId;
+    const startLine = (x, y, pointerId) => {
         const drawing = createDrawingState(state, pointerId);
     // https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events
-        receiver.setPointerCapture(e.pointerId);
-        const x = e.offsetX;
-        const y = e.offsetY;
+        // receiver.setPointerCapture(pointerId);
         drawing.x = x;
         drawing.y = y;
         drawing.isDrawing = true;
     };
-    const continueLine =  e => {
-        const pointerId = e.pointerId;
+
+    const continueLine =  (x,y,pointerId) => {
         const drawing = state.drawing[pointerId];
-        if (drawing.isDrawing === true) {
-            const x = e.offsetX;
-            const y = e.offsetY;
+        if (drawing?.isDrawing === true) {
             drawLines(canvases, x, y, dpr, state, drawing);
             drawing.x = x;
             drawing.y = y;
         }
     };
-    const endDrawing = (e) => {
-        const pointerId = e.pointerId;
+    const endDrawing = (x,y,pointerId) => {
         const drawing = state.drawing[pointerId];
-        if (drawing.isDrawing === true) {
+        if (drawing?.isDrawing === true) {
             delete state.drawing[pointerId];
-            const x = e.offsetX;
-            const y = e.offsetY;
             drawLines(canvases, x, y, dpr, state, drawing);
         }
     }
-    // receiver.addEventListener('mousedown', startLine);
-    // receiver.addEventListener('mousemove', continueLine);
-    // receiver.addEventListener('mouseup', endDrawing);a
-    receiver.addEventListener('pointerdown', startLine);
-    receiver.addEventListener('pointermove', continueLine);
-    receiver.addEventListener('pointerup', endDrawing);
-    // receiver.addEventListener('pointercancel', endDrawing);
-    // receiver.addEventListener('pointerout', endDrawing);
+
+    const mouseWrap = (f) => (e) => f(e.offsetX, e.offsetY, e.pointerId);
+    receiver.addEventListener('mousedown', mouseWrap(startLine));
+    receiver.addEventListener('mousemove', mouseWrap(continueLine));
+    receiver.addEventListener('mouseup', mouseWrap(endDrawing));
+
+    // https://developer.mozilla.org/en-US/docs/Web/API/Touch_events/Using_Touch_Events
+    const touchWrap = (f) => (e) => {
+        e.preventDefault();
+        const touches = e.changedTouches;
+        if(touches.length > 1){ console.log('tches', touches.length) }
+        f(touches[0].pageX, touches[0].pageY, touches[0].identifier);
+    };
+    receiver.addEventListener('touchstart', touchWrap(startLine));
+    receiver.addEventListener('touchmove', touchWrap(continueLine));
+    receiver.addEventListener('touchup', touchWrap(endDrawing));
 }
 
 function drawLines(canvases, x, y, dpr, state, drawing) {
