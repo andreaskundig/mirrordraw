@@ -157,27 +157,38 @@ function addPageSelect(parent, canvases, state, dpr) {
     return pageSelect;
 }
 
-function addColorButton(parent, state) {
-    const icons = {black: '&#11035;', white: '&#11036;'};
+function addColorButtons(parent, state, colors) {
+    const selectedStroke = 'rgb(0,0,0)';
+    const unselectedStroke = 'rgb(255,255,255)';
+    const w =20;
+    const h = 20;
+    const makeButton = (color) =>
+        `<svg style="cursor: pointer"  width="${w}" height="${h}">
+           <rect class="color-button" width="${w}" height="${h}"
+                 style="fill:${color};stroke-width:7;stroke:${unselectedStroke}" />
+         </svg>`;
     parent.insertAdjacentHTML(
         'beforeend',
-        `<span class="color-button" style="cursor: pointer" ></span>`);
-    const colorButton = parent.querySelector('.color-button');
+        `<div class="color-buttons">${colors.map(makeButton).join('')}</div>`);
+    const colorButtons = parent.querySelectorAll('.color-button');
+    colorButtons.update = (state) =>
+        colorButtons.forEach(colorButton => {
+            const color = colorButton.style.fill;
+            const newColor = state.lineStyle.strokeStyle || 'black';
+            const selected = color == newColor;
+            const stroke = selected ? selectedStroke : unselectedStroke;
+            colorButton.style.stroke = stroke;
+        });
 
-    colorButton.update = (state) => {
-        const newColor = state.lineStyle.strokeStyle || 'black';
-        const newIcon = icons[newColor];
-        colorButton.innerHTML = newIcon;
-    };
+    colorButtons.forEach(colorButton =>
+        colorButton.addEventListener('click', function() {
+            console.log(colorButton)
+            state.lineStyle.strokeStyle = colorButton.style.fill;
+            colorButtons.update(state);
+        }, false)
+    );
 
-    colorButton.addEventListener('click', function() {
-        const isBlack = state.lineStyle.strokeStyle == 'black';
-        const newColor = isBlack ? 'white' : 'black';
-        state.lineStyle.strokeStyle = newColor;
-        colorButton.update(state);
-    }, false);
-
-    return colorButton;
+    return colorButtons;
 }
 
 function addLineWidthSlider(parent, state) {
@@ -232,7 +243,9 @@ function addButtons(canvases, state, dims) {
     const dpr = dims.size.dpr;
     // const topMenu = byId('top-menu');
     const bottomMenu = byId('bottom-menu');
-    btns.push(addColorButton(bottomMenu, state));
+    btns.push(addColorButtons(
+        bottomMenu, state,
+        ['black', 'grey', 'silver', 'lightgrey', 'white']));
     btns.push(addLineWidthSlider(bottomMenu, state));
     btns.push(addClearButton(bottomMenu, canvases));
     btns.push(addFlipCheckbox(bottomMenu, canvases, state, dpr));
