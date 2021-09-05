@@ -1,6 +1,7 @@
 
 // http://www.williammalone.com/articles/create-html5-canvas-javascript-drawing-app/
 // https://developer.mozilla.org/en-US/docs/Web/API/Element/mousedown_event
+import { copyFlippedPanel, copyPanel, createDrawingState } from './lib.js';
 
 const PANEL_INDEXES = {a: [0,0], b: [1,0], c: [0,1], d: [1,1]};
 const P1 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
@@ -258,15 +259,6 @@ function addButtons(canvases, state, dims) {
 }
 
 const byId = (id) => document.getElementById(id);
-const canvasParentId = 'canvas-parent';
-
-const START_DRAWING_STATE = { isDrawing: false, x: 0, y: 0 };
-
-const createDrawingState = (state, pointerId) =>{
-    const drawing = Object.assign({}, START_DRAWING_STATE);
-    state.drawing[pointerId] = drawing;
-    return drawing;
-}
 
 function addDrawingListeners(sheet, dims){
     const {receiver, canvases, state} = sheet;
@@ -375,40 +367,6 @@ function copyCanvas(srcCanvas, srcOrder, destCanvas, destOrder,
     })
 }
 
-function copyPanel(srcCanvas, srcIndexes, destCanvas, destIndexes,
-                   w, h, dpr){
-    const s = srcIndexes;
-    const d = destIndexes;
-    destCanvas.context.drawImage(srcCanvas.canvas,
-        s[0] * w * dpr, s[1] * h * dpr,
-        w * dpr, h * dpr,
-        d[0] * w * dpr, d[1] * h * dpr,
-        w * dpr, h * dpr);
-}
-function copyFlippedPanel(srcCanvas, srcIndexes, destCanvas, destIndexes,
-                          w, h, dpr){
-    const s = srcIndexes;
-    const d = destIndexes;
-    const ctx = destCanvas.context;
-    const dx = d[0] * w;
-    const dy = d[1] * h;
-    const centerDx = dx + w/2;
-    const centerDy = dy + h/2;
-    const flippedDx = - w / 2;
-    const flippedDy = - h / 2;
-    ctx.save();
-    ctx.translate(centerDx * dpr, centerDy * dpr);
-    ctx.rotate(Math.PI);
-    ctx.drawImage(srcCanvas.canvas,
-        s[0] * w * dpr, s[1] * h * dpr,
-        w * dpr, h * dpr,
-        flippedDx * dpr, flippedDy * dpr,
-        w * dpr, h * dpr);
-    ctx.restore();
-    // Reset transformation matrix to the identity matrix
-    // ctx.setTransform(1, 0, 0, 1, 0, 0);
-}
-
 function drawLine(context, [x1, y1], [x2, y2], dpr, lineStyle) {
     context.save();
     context.scale(dpr, dpr);
@@ -443,6 +401,7 @@ function init() {
     };
     const sheet = createSheet(canvasParent, canvasCount,
                               dims, state);
+    console.log(sheet)
     addDrawingListeners(sheet, dims);
     addButtons(sheet.canvases, state, dims);
 }
