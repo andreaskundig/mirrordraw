@@ -6,8 +6,28 @@ export const createDrawingState = (state, pointerId) => {
     return drawing;
 }
 
-export function copyFlippedPanel(srcCanvas, srcIndexes, destCanvas, destIndexes,
-                          w, h, dpr){
+
+export const PANEL_INDEXES = {a: [0,0], b: [1,0], c: [0,1], d: [1,1]};
+
+export function copyPanel(srcCanvas, srcPanel,
+                          destCanvas, destPanel,
+                          width, height,
+                          devicePixelRatio, upsideDown){
+    const s = PANEL_INDEXES[srcPanel];
+    const d = PANEL_INDEXES[destPanel];
+    if (upsideDown) {
+        copyPanelUpsideDown(srcCanvas, s, destCanvas, d,
+                            width, height, devicePixelRatio);
+    } else {
+        copyPanelRightSideUp(srcCanvas, s, destCanvas, d,
+                             width, height, devicePixelRatio);
+    }
+
+}
+
+function copyPanelUpsideDown(srcCanvas, srcIndexes,
+                                    destCanvas, destIndexes,
+                                    w, h, dpr) {
     const s = srcIndexes;
     const d = destIndexes;
     const ctx = destCanvas.context;
@@ -30,8 +50,9 @@ export function copyFlippedPanel(srcCanvas, srcIndexes, destCanvas, destIndexes,
     // ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
-export function copyPanel(srcCanvas, srcIndexes, destCanvas, destIndexes,
-                   w, h, dpr){
+function copyPanelRightSideUp(srcCanvas, srcIndexes,
+                                     destCanvas, destIndexes,
+                                     w, h, dpr) {
     const s = srcIndexes;
     const d = destIndexes;
     destCanvas.context.drawImage(srcCanvas.canvas,

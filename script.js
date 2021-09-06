@@ -1,9 +1,8 @@
 
 // http://www.williammalone.com/articles/create-html5-canvas-javascript-drawing-app/
 // https://developer.mozilla.org/en-US/docs/Web/API/Element/mousedown_event
-import { copyFlippedPanel, copyPanel, createDrawingState } from './lib.js';
+import { copyPanel, createDrawingState } from './lib.js';
 
-const PANEL_INDEXES = {a: [0,0], b: [1,0], c: [0,1], d: [1,1]};
 const P1 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
              {up: true,  panels:['b', 'a', 'd', 'c']},
              {up: false, panels:['c', 'd', 'a', 'b']}];
@@ -355,15 +354,12 @@ function copyCanvas(srcCanvas, srcOrder, destCanvas, destOrder,
                     w, h, dpr, upsideDown ){
     const destPanels = destOrder.panels.slice();
     if(upsideDown){ destPanels.reverse(); }
-    srcOrder.panels.forEach((sourceName, i) => {
-        const destinationName = destPanels[i];
-        const s = PANEL_INDEXES[sourceName];
-        const d = PANEL_INDEXES[destinationName];
-        if(upsideDown){
-            copyFlippedPanel(srcCanvas, s, destCanvas, d, w, h, dpr);
-        }else{
-            copyPanel(srcCanvas, s, destCanvas, d, w, h, dpr);
-        }
+    srcOrder.panels.forEach((srcPanel, i) => {
+        const destPanel = destPanels[i];
+        copyPanel(srcCanvas, srcPanel,
+                  destCanvas, destPanel,
+                  w, h,
+                  dpr, upsideDown)
     })
 }
 
