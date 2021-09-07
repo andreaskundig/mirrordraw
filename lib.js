@@ -15,19 +15,15 @@ export function copyPanel(srcCanvas, srcPanel,
                           devicePixelRatio, upsideDown){
     const s = PANEL_INDEXES[srcPanel];
     const d = PANEL_INDEXES[destPanel];
-    if (upsideDown) {
-        copyPanelUpsideDown(srcCanvas, s, destCanvas, d,
-                            width, height, devicePixelRatio);
-    } else {
-        copyPanelRightSideUp(srcCanvas, s, destCanvas, d,
-                             width, height, devicePixelRatio);
-    }
-
+    const angle = upsideDown ? Math.PI : 0;
+    copyRotatedPanel(srcCanvas, s, destCanvas, d,
+                     width, height, devicePixelRatio,
+                     angle);
 }
 
-function copyPanelUpsideDown(srcCanvas, srcIndexes,
-                                    destCanvas, destIndexes,
-                                    w, h, dpr) {
+function copyRotatedPanel(srcCanvas, srcIndexes,
+                          destCanvas, destIndexes,
+                          w, h, dpr, angle) {
     const s = srcIndexes;
     const d = destIndexes;
     const ctx = destCanvas.context;
@@ -39,7 +35,7 @@ function copyPanelUpsideDown(srcCanvas, srcIndexes,
     const flippedDy = - h / 2;
     ctx.save();
     ctx.translate(centerDx * dpr, centerDy * dpr);
-    ctx.rotate(Math.PI);
+    ctx.rotate(angle);
     ctx.drawImage(srcCanvas.canvas,
         s[0] * w * dpr, s[1] * h * dpr,
         w * dpr, h * dpr,
@@ -48,16 +44,4 @@ function copyPanelUpsideDown(srcCanvas, srcIndexes,
     ctx.restore();
     // Reset transformation matrix to the identity matrix
     // ctx.setTransform(1, 0, 0, 1, 0, 0);
-}
-
-function copyPanelRightSideUp(srcCanvas, srcIndexes,
-                                     destCanvas, destIndexes,
-                                     w, h, dpr) {
-    const s = srcIndexes;
-    const d = destIndexes;
-    destCanvas.context.drawImage(srcCanvas.canvas,
-        s[0] * w * dpr, s[1] * h * dpr,
-        w * dpr, h * dpr,
-        d[0] * w * dpr, d[1] * h * dpr,
-        w * dpr, h * dpr);
 }
