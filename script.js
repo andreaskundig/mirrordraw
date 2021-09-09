@@ -1,7 +1,7 @@
 
 // http://www.williammalone.com/articles/create-html5-canvas-javascript-drawing-app/
 // https://developer.mozilla.org/en-US/docs/Web/API/Element/mousedown_event
-import { copyPanel, createDrawingState } from './lib.js';
+import { copyPanel, addDrawListeners } from './lib.js';
 
 const P1 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
              {up: true,  panels:['b', 'a', 'd', 'c']},
@@ -68,14 +68,14 @@ function createSheet(parent, canvasCount, d, state){
                    width: ${totalWidth}px;
                    height: ${totalHeight}px; ">
         ${canvasConfigs.map(canvasHtml).join('')}
-        <div class="receiver"
+        <div class="event-receiver"
              style="position: absolute;
                     width: ${totalWidth}px;
                     height: ${d.size.h + d.margin.top * 2}px;
                     z-index:1;"></div>
        </div>
 `);
-    const receiver = parent.querySelector('.receiver');
+    const eventReceiver = parent.querySelector('.event-receiver');
     const canvasEls = parent.querySelectorAll('canvas');
     const canvases = canvasConfigs.map((canvConf, i) => {
         const canvas = canvasEls[i];
@@ -83,8 +83,8 @@ function createSheet(parent, canvasCount, d, state){
         return Object.assign(canvConf,{i, canvas, context})
     });
     clearAll(canvases);
-    //TODO put receiver and canvases in state?
-    return {receiver, canvases, state};
+    //TODO put eventReceiver and canvases in state?
+    return {eventReceiver, canvases, state};
 }
 
 function addDownloadButton(parent, canvases) {
@@ -260,49 +260,12 @@ function addButtons(canvases, state, dims) {
 const byId = (id) => document.getElementById(id);
 
 function addDrawingListeners(sheet, dims){
-    const {receiver, canvases, state} = sheet;
+    const {eventReceiver, canvases, state} = sheet;
     state.drawing = { };
     const dpr = dims.size.dpr;
-    const startLine = (x, y, pointerId) => {
-        const drawing = createDrawingState(state, pointerId);
-    // https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events
-        // receiver.setPointerCapture(pointerId);
-        drawing.x = x;
-        drawing.y = y;
-        drawing.isDrawing = true;
-    };
-
-    const continueLine =  (x,y,pointerId) => {
-        const drawing = state.drawing[pointerId];
-        if (drawing?.isDrawing === true) {
+    const draw = (x, y, drawing) =>
             drawLines(canvases, x, y, dpr, state, drawing);
-            drawing.x = x;
-            drawing.y = y;
-        }
-    };
-    const endDrawing = (x,y,pointerId) => {
-        const drawing = state.drawing[pointerId];
-        if (drawing?.isDrawing === true) {
-            delete state.drawing[pointerId];
-            drawLines(canvases, x, y, dpr, state, drawing);
-        }
-    }
-
-    const mouseWrap = (f) => (e) => f(e.offsetX, e.offsetY, e.pointerId);
-    receiver.addEventListener('mousedown', mouseWrap(startLine));
-    receiver.addEventListener('mousemove', mouseWrap(continueLine));
-    receiver.addEventListener('mouseup', mouseWrap(endDrawing));
-
-    // https://developer.mozilla.org/en-US/docs/Web/API/Touch_events/Using_Touch_Events
-    const touchWrap = (f) => (e) => {
-        e.preventDefault();
-        const touches = e.changedTouches;
-        if(touches.length > 1){ console.log('tches', touches.length) }
-        f(touches[0].pageX, touches[0].pageY, touches[0].identifier);
-    };
-    receiver.addEventListener('touchstart', touchWrap(startLine));
-    receiver.addEventListener('touchmove', touchWrap(continueLine));
-    receiver.addEventListener('touchup', touchWrap(endDrawing));
+    addDrawListeners(eventReceiver, state, draw);
 }
 
 function drawLines(canvases, x, y, dpr, state, drawing) {
