@@ -1,7 +1,7 @@
 
 // http://www.williammalone.com/articles/create-html5-canvas-javascript-drawing-app/
 // https://developer.mozilla.org/en-US/docs/Web/API/Element/mousedown_event
-import { copyPanel, addDrawListeners } from './lib.js';
+import { addDrawListeners, copyPanel } from './lib.js';
 
 const P1 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
              {up: true,  panels:['b', 'a', 'd', 'c']},
@@ -263,23 +263,22 @@ function addDrawingListeners(sheet, dims){
     const {eventReceiver, canvases, state} = sheet;
     state.drawing = { };
     const dpr = dims.size.dpr;
-    const draw = (x, y, drawing) =>
-            drawLines(canvases, x, y, dpr, state, drawing);
-    addDrawListeners(eventReceiver, state, draw);
+    const drawFromTo = (x0, y0, x1, y1) =>
+          drawLines(canvases, x0, y0, x1, y1, dpr, state);
+    addDrawListeners(eventReceiver, state, drawFromTo);
 }
 
-function drawLines(canvases, x, y, dpr, state, drawing) {
-    const srcCanvas = canvases.find(c => canvasContains(c, x, y));
+function drawLines(canvases, x0, y0, x1, y1, dpr, state) {
+    const srcCanvas = canvases.find(c => canvasContains(c, x1, y1));
     if(!srcCanvas){ return; }
     const {page, flip, lineStyle} = state;
-    const oldXY = [drawing.x, drawing.y];
     const oldSrcCanvas =
-          canvases.find(c => canvasContains(c, ...oldXY));
+          canvases.find(c => canvasContains(c, x0, y0));
     if(srcCanvas != oldSrcCanvas){
         console.log('changed canvas')
     }
-    const from = canvasCoordinates(oldXY, srcCanvas);
-    const to = canvasCoordinates([x, y], srcCanvas);
+    const from = canvasCoordinates(x0, y0, srcCanvas);
+    const to = canvasCoordinates(x1, y1, srcCanvas);
     drawLine(srcCanvas.context, from, to, dpr, lineStyle);
     copySrcCanvas(srcCanvas, canvases, dpr, page, flip);
 }
@@ -307,7 +306,7 @@ function clearAll(canvases) {
     });
 }
 
-function canvasCoordinates([x, y], canvasConfig) {
+function canvasCoordinates(x, y, canvasConfig) {
     const newX = x - canvasConfig.x;
     const newY = y - canvasConfig.y;
     return [newX, newY];
@@ -324,20 +323,6 @@ function copyCanvas(srcCanvas, srcOrder, destCanvas, destOrder,
                   w, h,
                   dpr, upsideDown)
     })
-}
-
-function drawLine(context, [x1, y1], [x2, y2], dpr, lineStyle) {
-    context.save();
-    context.scale(dpr, dpr);
-    context.beginPath();
-    context.strokeStyle = lineStyle?.strokeStyle || 'black';
-    context.lineWidth = lineStyle?.lineWidth || 10;
-    context.lineCap = 'round';
-    context.moveTo(x1, y1);
-    context.lineTo(x2, y2);
-    context.stroke();
-    context.closePath();
-    context.restore();
 }
 
 function init() {

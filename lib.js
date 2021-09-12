@@ -6,7 +6,7 @@ const createDrawingState = (state, pointerId) => {
     return drawing;
 }
 
-export function addDrawListeners(eventReceiver, state, draw){
+export function addDrawListeners(eventReceiver, state, drawFromTo){
     const startLine = (x, y, pointerId) => {
         const drawing = createDrawingState(state, pointerId);
     // https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events
@@ -19,7 +19,7 @@ export function addDrawListeners(eventReceiver, state, draw){
     const continueLine =  (x,y,pointerId) => {
         const drawing = state.drawing[pointerId];
         if (drawing?.isDrawing === true) {
-            draw(x, y, drawing);
+          drawFromTo(drawing.x, drawing.y, x, y);
             drawing.x = x;
             drawing.y = y;
         }
@@ -27,8 +27,8 @@ export function addDrawListeners(eventReceiver, state, draw){
     const endDrawing = (x,y,pointerId) => {
         const drawing = state.drawing[pointerId];
         if (drawing?.isDrawing === true) {
-            delete state.drawing[pointerId];
-            draw(x, y, drawing);
+          delete state.drawing[pointerId];
+          drawFromTo(drawing.x, drawing.y, x, y);
         }
     }
 
@@ -47,6 +47,20 @@ export function addDrawListeners(eventReceiver, state, draw){
     eventReceiver.addEventListener('touchstart', touchWrap(startLine));
     eventReceiver.addEventListener('touchmove', touchWrap(continueLine));
     eventReceiver.addEventListener('touchup', touchWrap(endDrawing));
+}
+
+export function drawLine(context, [x1, y1], [x2, y2], dpr, lineStyle) {
+    context.save();
+    context.scale(dpr, dpr);
+    context.beginPath();
+    context.strokeStyle = lineStyle?.strokeStyle || 'black';
+    context.lineWidth = lineStyle?.lineWidth || 10;
+    context.lineCap = 'round';
+    context.moveTo(x1, y1);
+    context.lineTo(x2, y2);
+    context.stroke();
+    context.closePath();
+    context.restore();
 }
 
 
