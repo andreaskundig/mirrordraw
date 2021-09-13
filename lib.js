@@ -49,15 +49,15 @@ export function addDrawListeners(eventReceiver, state, drawFromTo){
     eventReceiver.addEventListener('touchup', touchWrap(endDrawing));
 }
 
-export function drawLine(context, [x1, y1], [x2, y2], dpr, lineStyle) {
+export function drawLine(context, [x0, y0], [x1, y1], dpr, lineStyle) {
     context.save();
     context.scale(dpr, dpr);
     context.beginPath();
     context.strokeStyle = lineStyle?.strokeStyle || 'black';
     context.lineWidth = lineStyle?.lineWidth || 10;
     context.lineCap = 'round';
-    context.moveTo(x1, y1);
-    context.lineTo(x2, y2);
+    context.moveTo(x0, y0);
+    context.lineTo(x1, y1);
     context.stroke();
     context.closePath();
     context.restore();
@@ -111,4 +111,9 @@ function copyRotatedRectangle(srcCanvas, sourceX, sourceY,
     ctx.restore();
     // Reset transformation matrix to the identity matrix
     // ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+export function clearContext(ctx) {
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }

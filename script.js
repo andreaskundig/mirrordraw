@@ -1,7 +1,7 @@
 
 // http://www.williammalone.com/articles/create-html5-canvas-javascript-drawing-app/
 // https://developer.mozilla.org/en-US/docs/Web/API/Element/mousedown_event
-import { addDrawListeners, copyPanel } from './lib.js';
+import { addDrawListeners, drawLine, copyPanel, clearContext } from './lib.js';
 
 const P1 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
              {up: true,  panels:['b', 'a', 'd', 'c']},
@@ -100,32 +100,40 @@ function addDownloadButton(parent, canvases) {
 }
 
 function addClearButton(parent, canvases) {
+    const postProcess = () => {
+        clearAll(canvases);
+    };
+
     parent.insertAdjacentHTML(
         'beforeend',
         ' <a class="clear" href="#" >clear</a>');
     const clear = parent.querySelector('.clear');
-    clear.addEventListener('click', () => clearAll(canvases), false);
+    clear.addEventListener('click', postProcess, false);
     return clear;
 }
 
 function addUploadButton(parent, canvases, state, dpr) {
+    const srcCanvas = canvases[0];
+    const ctx = srcCanvas.context;
+    const postProcess = () => {
+        const { page, flip } = state;
+        clearAll(canvases.slice(1));
+        copySrcCanvas(srcCanvas, canvases, dpr, page, flip);
+    };
+
     parent.insertAdjacentHTML('beforeend', `
         <a class="upload" href="#" >upload</a>
         <input type="file" class="imageLoader" style="display:none"/>
     `);
-    const srcCanvas = canvases[0];
     const imageLoader = parent.querySelector('.imageLoader')
     imageLoader.addEventListener('change', (changeEvent) => {
         var reader = new FileReader();
         reader.addEventListener('load', (event) => {
             var img = new Image();
             img.addEventListener('load', () => {
-                clearAll(canvases);
-                const ctx = srcCanvas.context;
                 ctx.drawImage(img, 0, 0,
                               ctx.canvas.height, ctx.canvas.width);
-                const { page, flip } = state;
-                copySrcCanvas(srcCanvas, canvases, dpr, page, flip);
+                postProcess();
             });
             img.src = event.target.result;
         });
@@ -136,25 +144,6 @@ function addUploadButton(parent, canvases, state, dpr) {
         imageLoader.click();
     }, false);
     return upload;
-}
-
-function addPageSelect(parent, canvases, state, dpr) {
-    parent.insertAdjacentHTML('beforeend', `
-        <select class="pages">
-           ${PAGES.map((_p, i)=>
-              `<option value="${i}">page ${i+1}</option>`).join('')}
-        </select>
-    `);
-    const srcCanvas = canvases[0];
-    const pageSelect = parent.querySelector('.pages')
-    pageSelect.addEventListener('change', function(e) {
-        state.page = PAGES[+e.target.value]
-        clearAll(canvases.slice(1));
-        const {page, flip} = state;
-        copySrcCanvas(srcCanvas, canvases, dpr, page, flip);
-    }, false);
-
-    return pageSelect;
 }
 
 function addColorButtons(parent, state, colors) {
@@ -216,6 +205,25 @@ function addLineWidthSlider(parent, state) {
         display.value = state.lineStyle.lineWidth;
     }, false);
     return slider;
+}
+
+function addPageSelect(parent, canvases, state, dpr) {
+    parent.insertAdjacentHTML('beforeend', `
+        <select class="pages">
+           ${PAGES.map((_p, i)=>
+              `<option value="${i}">page ${i+1}</option>`).join('')}
+        </select>
+    `);
+    const srcCanvas = canvases[0];
+    const pageSelect = parent.querySelector('.pages')
+    pageSelect.addEventListener('change', function(e) {
+        state.page = PAGES[+e.target.value]
+        clearAll(canvases.slice(1));
+        const {page, flip} = state;
+        copySrcCanvas(srcCanvas, canvases, dpr, page, flip);
+    }, false);
+
+    return pageSelect;
 }
 
 function addFlipCheckbox(parent, canvases, state, dpr) {
@@ -298,12 +306,7 @@ function copySrcCanvas(srcCanvas, canvases, dpr, page, flip){
 }
 
 function clearAll(canvases) {
-    canvases.forEach(c => {
-        const ctx = c.context;
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        // ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    });
+    canvases.forEach(c => clearContext(c.context));
 }
 
 function canvasCoordinates(x, y, canvasConfig) {
