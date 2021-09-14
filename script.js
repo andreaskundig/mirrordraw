@@ -87,28 +87,25 @@ function createSheet(parent, canvasCount, d, state){
     return {eventReceiver, canvases, state};
 }
 
-function addDownloadButton(parent, canvases) {
+function addDownloadButton(parent, context) {
     parent.insertAdjacentHTML(
         'beforeend',
         `<a class="download" href="#" target="_blank">download</a>`);
+
     const download = parent.querySelector('.download');
     download.addEventListener('click', function() {
-        const context = canvases[0].context;
         this.href = context.canvas.toDataURL('image/png');
     }, false);
     return download;
 }
 
-function addClearButton(parent, canvases) {
-    const postProcess = () => {
-        clearAll(canvases);
-    };
-
+function addClearButton(parent, contexts) {
     parent.insertAdjacentHTML(
         'beforeend',
         ' <a class="clear" href="#" >clear</a>');
     const clear = parent.querySelector('.clear');
-    clear.addEventListener('click', postProcess, false);
+    clear.addEventListener(
+        'click', () => contexts.forEach(c => clearContext(c)), false);
     return clear;
 }
 
@@ -255,10 +252,11 @@ function addButtons(canvases, state, dims) {
         bottomMenu, state,
         ['black', 'grey', 'silver', 'lightgrey', 'white']));
     btns.push(addLineWidthSlider(bottomMenu, state));
-    btns.push(addClearButton(bottomMenu, canvases));
+    btns.push(addClearButton(bottomMenu,
+                             canvases.map(c => c.context)));
     btns.push(addFlipCheckbox(bottomMenu, canvases, state, dpr));
     btns.push(addPageSelect(bottomMenu, canvases, state, dpr));
-    btns.push(addDownloadButton(bottomMenu, canvases));
+    btns.push(addDownloadButton(bottomMenu, canvases[0].context));
     btns.push(addUploadButton(bottomMenu, canvases, state, dpr));
 
     btns.forEach(b => b.update && b.update(state));
