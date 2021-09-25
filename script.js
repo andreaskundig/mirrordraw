@@ -267,11 +267,10 @@ const byId = (id) => document.getElementById(id);
 
 function addDrawingListeners(sheet, dims){
     const {eventReceiver, canvases, state} = sheet;
-    state.drawing = { };
     const dpr = dims.size.dpr;
     const drawFromTo = (x0, y0, x1, y1) =>
           drawLines(canvases, x0, y0, x1, y1, dpr, state);
-    addDrawListeners(eventReceiver, state, drawFromTo);
+    addDrawListeners(eventReceiver, drawFromTo);
 }
 
 function drawLines(canvases, x0, y0, x1, y1, dpr, state) {

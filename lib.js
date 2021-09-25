@@ -1,52 +1,51 @@
 const START_DRAWING_STATE = { isDrawing: false, x: 0, y: 0 };
 
-const createDrawingState = (state, pointerId) => {
-    const drawing = Object.assign({}, START_DRAWING_STATE);
-    state.drawing[pointerId] = drawing;
-    return drawing;
-}
+const createDrawingState = () =>
+  Object.assign({}, START_DRAWING_STATE);
 
-export function addDrawListeners(eventReceiver, state, drawFromTo){
-    const startLine = (x, y, pointerId) => {
-        const drawing = createDrawingState(state, pointerId);
+export function addDrawListeners(eventReceiver, drawFromTo){
+  const drawingStates = {};
+  const startLine = (x, y, pointerId) => {
+    const drawing = createDrawingState();
+    drawingStates[pointerId] = drawing;
     // https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events
-        // eventReceiver.setPointerCapture(pointerId);
-        drawing.x = x;
-        drawing.y = y;
-        drawing.isDrawing = true;
-    };
+    // eventReceiver.setPointerCapture(pointerId);
+    drawing.x = x;
+    drawing.y = y;
+    drawing.isDrawing = true;
+  };
 
-    const continueLine =  (x,y,pointerId) => {
-        const drawing = state.drawing[pointerId];
-        if (drawing?.isDrawing === true) {
-          drawFromTo(drawing.x, drawing.y, x, y);
-            drawing.x = x;
-            drawing.y = y;
-        }
-    };
-    const endDrawing = (x,y,pointerId) => {
-        const drawing = state.drawing[pointerId];
-        if (drawing?.isDrawing === true) {
-          delete state.drawing[pointerId];
-          drawFromTo(drawing.x, drawing.y, x, y);
-        }
+  const continueLine = (x, y, pointerId) => {
+    const drawing = drawingStates[pointerId];
+    if (drawing?.isDrawing === true) {
+      drawFromTo(drawing.x, drawing.y, x, y);
+      drawing.x = x;
+      drawing.y = y;
     }
+  };
+  const endDrawing = (x, y, pointerId) => {
+    const drawing = drawingStates[pointerId];
+    if (drawing?.isDrawing === true) {
+      delete drawingStates[pointerId];
+      drawFromTo(drawing.x, drawing.y, x, y);
+    }
+  }
 
-    const mouseWrap = (f) => (e) => f(e.offsetX, e.offsetY, e.pointerId);
-    eventReceiver.addEventListener('mousedown', mouseWrap(startLine));
-    eventReceiver.addEventListener('mousemove', mouseWrap(continueLine));
-    eventReceiver.addEventListener('mouseup', mouseWrap(endDrawing));
+  const mouseWrap = (f) => (e) => f(e.offsetX, e.offsetY, e.pointerId);
+  eventReceiver.addEventListener('mousedown', mouseWrap(startLine));
+  eventReceiver.addEventListener('mousemove', mouseWrap(continueLine));
+  eventReceiver.addEventListener('mouseup', mouseWrap(endDrawing));
 
-    // https://developer.mozilla.org/en-US/docs/Web/API/Touch_events/Using_Touch_Events
-    const touchWrap = (f) => (e) => {
-        e.preventDefault();
-        const touches = e.changedTouches;
-        if(touches.length > 1){ console.log('tches', touches.length) }
-        f(touches[0].pageX, touches[0].pageY, touches[0].identifier);
-    };
-    eventReceiver.addEventListener('touchstart', touchWrap(startLine));
-    eventReceiver.addEventListener('touchmove', touchWrap(continueLine));
-    eventReceiver.addEventListener('touchup', touchWrap(endDrawing));
+  // https://developer.mozilla.org/en-US/docs/Web/API/Touch_events/Using_Touch_Events
+  const touchWrap = (f) => (e) => {
+    e.preventDefault();
+    const touches = e.changedTouches;
+    if (touches.length > 1) { console.log('tches', touches.length) }
+    f(touches[0].pageX, touches[0].pageY, touches[0].identifier);
+  };
+  eventReceiver.addEventListener('touchstart', touchWrap(startLine));
+  eventReceiver.addEventListener('touchmove', touchWrap(continueLine));
+  eventReceiver.addEventListener('touchup', touchWrap(endDrawing));
 }
 
 export function drawLine(context, [x0, y0], [x1, y1], dpr, lineStyle) {
