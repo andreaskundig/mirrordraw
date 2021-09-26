@@ -31,6 +31,8 @@ export function addDrawListeners(eventReceiver, drawFromTo){
     }
   }
 
+  // TODO maybe copy event handling from paper.js
+  // https://github.com/paperjs/paper.js/blob/53b98de8b5a28c30e763890a21b4c824ab8cb280/src/view/View.js#L1070
   const mouseWrap = (f) => (e) => f(e.offsetX, e.offsetY, e.pointerId);
   eventReceiver.addEventListener('mousedown', mouseWrap(startLine));
   eventReceiver.addEventListener('mousemove', mouseWrap(continueLine));
@@ -50,7 +52,7 @@ export function addDrawListeners(eventReceiver, drawFromTo){
 
 export function drawLine(context, [x0, y0], [x1, y1], dpr, lineStyle) {
     context.save();
-    context.scale(dpr, dpr);
+    context.scale(dpr || 1, dpr || 1);
     context.beginPath();
     context.strokeStyle = lineStyle?.strokeStyle || 'black';
     context.lineWidth = lineStyle?.lineWidth || 10;
