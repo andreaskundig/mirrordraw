@@ -31,43 +31,6 @@ function canvasContains(canvConf, x, y){
         && y >= canvConf.y && y <= canvConf.y + canvConf.h;
 }
 
-// TODO write a test for this
-function canvasIntersections(canvConf, x0, y0, slope){
-    // const slope =  (y1 - y0) / (x1 - x0);
-
-    // dx before canvas ( > 0 if outside)
-    const bDxFromX = Math.max(0, canvConf.x - x0);
-    const bDyFromX = bDxFromX * slope ;
-    let dx = bDxFromX;
-    let dy = bDyFromX;
-
-    // dy before canvas ( > 0 if outside)
-    const bDyFromY = Math.max(0, canvConf.y - y0);
-    const bDxFromY = bDyFromY / slope ;
-    if (Math.abs(dx) < Math.abs(bDxFromY)) {
-        dx = bDxFromY;
-        dy = bDyFromY;
-    }
-
-    // dx after canvas ( < 0 if outside)
-    const aDxFromX = Math.min(0, canvConf.x + canvConf.h - x0 );
-    const aDyFromX = aDxFromX * slope;
-    if (Math.abs(dx) < Math.abs(aDxFromX)) {
-        dx = aDxFromX;
-        dy = aDyFromX;
-    }
-
-    // dy before canvas ( < 0 if outside)
-    const aDyFromY = Math.min(0, canvConf.y +  canvConf.h - y0 );
-    const aDxFromY = aDyFromY / slope;
-    if (Math.abs(dx) < Math.abs(aDxFromY)) {
-        dx = aDxFromY;
-        dy = aDyFromY;
-    }
-
-    return [x0 + dx, y0 + dy];
-}
-
 function canvasHtml(config) {
     const { w, h, d, x, y } = config;
     return `

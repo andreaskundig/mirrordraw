@@ -118,3 +118,40 @@ export function clearContext(ctx) {
   ctx.fillStyle = 'white';
   ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
+
+// TODO write a test for this
+export function rectangleIntersection(rectConf, x0, y0, slope){
+    // const slope =  (y1 - y0) / (x1 - x0);
+
+    // dx before canvas ( > 0 if outside)
+    const bDxFromX = Math.max(0, rectConf.x - x0);
+    const bDyFromX = bDxFromX * slope ;
+    let dx = bDxFromX;
+    let dy = bDyFromX;
+
+    // dy before canvas ( > 0 if outside)
+    const bDyFromY = Math.max(0, rectConf.y - y0);
+    const bDxFromY = bDyFromY / slope ;
+    if (Math.abs(dx) < Math.abs(bDxFromY)) {
+        dx = bDxFromY;
+        dy = bDyFromY;
+    }
+
+    // dx after canvas ( < 0 if outside)
+    const aDxFromX = Math.min(0, rectConf.x + rectConf.h - x0 );
+    const aDyFromX = aDxFromX * slope;
+    if (Math.abs(dx) < Math.abs(aDxFromX)) {
+        dx = aDxFromX;
+        dy = aDyFromX;
+    }
+
+    // dy before canvas ( < 0 if outside)
+    const aDyFromY = Math.min(0, rectConf.y +  rectConf.h - y0 );
+    const aDxFromY = aDyFromY / slope;
+    if (Math.abs(dx) < Math.abs(aDxFromY)) {
+        dx = aDxFromY;
+        dy = aDyFromY;
+    }
+
+    return [x0 + dx, y0 + dy];
+}
