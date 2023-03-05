@@ -1,7 +1,7 @@
 
 // http://www.williammalone.com/articles/create-html5-canvas-javascript-drawing-app/
 // https://developer.mozilla.org/en-US/docs/Web/API/Element/mousedown_event
-import { addDrawListeners, drawLine, copyPanel, clearContext } from './lib.js';
+import { addDrawListeners, drawLine, copyPanel, clearContext, rectangleIntersection, rectangleContains } from './lib.js';
 
 const P1 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
              {up: true,  panels:['b', 'a', 'd', 'c']},
@@ -15,20 +15,24 @@ const P3 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
 const P4 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
              {up: false, panels:['c', 'd', 'a', 'b']},
              {up: false, panels:['d', 'c', 'b', 'a']}];
+const P7 = [ {up: true,  panels:['a', 'b', 'c', 'd']},
+             {up: false, panels:['d', 'c', 'b', 'a']}];
              // {up: false, panels:['b', 'a', 'd', 'c']},
              // {up: false, panels:['a', 'b', 'c', 'd']}];
 const P5 = P3;
 const P6 = P2;
-const PAGES = [P1, P2, P3, P4, P5, P6];
+const PAGES = [P1, P2, P3, P4, P5, P6, P7];
 const LINE_WIDTHS = [3, 7, 20, 55, 150, 400];
+
+function pageName(i){
+    if(i==6) {
+        return 'renversé'
+    }
+    return `page ${i+1}`
+}
 
 function flip(page){
     return {up: !page.up, panels: page.panels.slice().reverse()};
-}
-
-function canvasContains(canvConf, x, y){
-    return x >= canvConf.x && x <= canvConf.x + canvConf.w
-        && y >= canvConf.y && y <= canvConf.y + canvConf.h;
 }
 
 function canvasHtml(config) {
@@ -205,10 +209,12 @@ function addLineWidthSlider(parent, state) {
 }
 
 function addPageSelect(parent, canvases, state, dpr) {
+    const selectedIndex = PAGES.findIndex(p => p == state.page)
+    const selected = i => i == selectedIndex ? 'selected="selected"' : ''
     parent.insertAdjacentHTML('beforeend', `
         <select class="pages">
            ${PAGES.map((_p, i)=>
-              `<option value="${i}">page ${i+1}</option>`).join('')}
+              `<option value="${i}" ${selected(i)}>${pageName(i)}</option>`).join('')}
         </select>
     `);
     const srcCanvas = canvases[0];
@@ -274,18 +280,36 @@ function addDrawingListeners(sheet, dims){
 }
 
 function drawLines(canvases, x0, y0, x1, y1, dpr, state) {
-    const srcCanvas = canvases.find(c => canvasContains(c, x0, y0));
+    const srcCanvas = canvases.find(c => rectangleContains(c, x0, y0));
     if(!srcCanvas){ return; }
-    const {page, flip, lineStyle} = state;
+    drawLineCopyCanvas(srcCanvas, canvases, x0, y0, x1, y1, dpr, state);
     const newSrcCanvas =
-          canvases.find(c => canvasContains(c, x1, y1));
+          canvases.find(c => rectangleContains(c, x1, y1));
     if(srcCanvas != newSrcCanvas){
-        console.log('changed canvas')
+        drawLineCopyCanvas(newSrcCanvas, canvases, x0, y0, x1, y1,
+                           dpr, state);
     }
-    const from = canvasCoordinates(x0, y0, srcCanvas);
-    const to = canvasCoordinates(x1, y1, srcCanvas);
+}
+
+function drawLineCopyCanvas(
+    srcCanvas, canvases, x0, y0, x1, y1, dpr, state)
+{
+    // if(!srcCanvas){
+    //     return;
+    // }
+    const {page, flip, lineStyle} = state;
+    const x0c = x0;
+    const y0c = y0;
+    const x1c = x1;
+    const y1c = y1;
+    // const slope =  (y1 - y0) / (x1 - x0);
+    // const [x0c, y0c] = rectangleIntersection(srcCanvas, x0, y0, slope);
+    // const [x1c, y1c] = rectangleIntersection(srcCanvas, x1, y1, slope);
+    const from = canvasCoordinates(x0c, y0c, srcCanvas);
+    const to = canvasCoordinates(x1c, y1c, srcCanvas);
     drawLine(srcCanvas.context, from, to, dpr, lineStyle);
     copySrcCanvas(srcCanvas, canvases, dpr, page, flip);
+
 }
 
 function copySrcCanvas(srcCanvas, canvases, dpr, page, flip){
@@ -336,7 +360,7 @@ function init() {
                            dpr: window.devicePixelRatio }, margin};
     const canvasParent = byId('canvas-parent');
     const state = {
-        page: P1,
+        page: P7,
         flip: true,
         lineStyle: {
             strokeStyle: 'black',

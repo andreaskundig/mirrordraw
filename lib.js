@@ -119,9 +119,17 @@ export function clearContext(ctx) {
   ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 }
 
-// TODO write a test for this
+export function rectangleContains(canvConf, x, y){
+    return canvConf &&
+        x >= canvConf.x && x <= canvConf.x + canvConf.w
+        && y >= canvConf.y && y <= canvConf.y + canvConf.h;
+}
+
 export function rectangleIntersection(rectConf, x0, y0, slope){
     // const slope =  (y1 - y0) / (x1 - x0);
+    if(!rectConf || rectangleContains(rectConf, x0, y0)){
+      return [x0, y0];
+    }
 
     // dx before canvas ( > 0 if outside)
     const bDxFromX = Math.max(0, rectConf.x - x0);
