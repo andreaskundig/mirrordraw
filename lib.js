@@ -41,9 +41,12 @@ export function addDrawListeners(eventReceiver, drawFromTo){
   // https://developer.mozilla.org/en-US/docs/Web/API/Touch_events/Using_Touch_Events
   const touchWrap = (f) => (e) => {
     e.preventDefault();
+    const rect = e.target.getBoundingClientRect();
     const touches = e.changedTouches;
     if (touches.length > 1) { console.log('tches', touches.length) }
-    f(touches[0].pageX, touches[0].pageY, touches[0].identifier);
+    f(touches[0].pageX - rect.left,
+      touches[0].pageY - rect.top,
+      touches[0].identifier);
   };
   eventReceiver.addEventListener('touchstart', touchWrap(startLine));
   eventReceiver.addEventListener('touchmove', touchWrap(continueLine));
